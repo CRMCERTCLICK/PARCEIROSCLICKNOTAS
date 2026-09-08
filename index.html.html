@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Parceiros | ClickNotas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Fontes Premium: Plus Jakarta Sans para títulos/logo, Inter para dados -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fffdf0',
+                            100: '#fff9d6',
+                            200: '#fff1a8',
+                            300: '#ffe570',
+                            400: '#ffd333',
+                            500: '#ffb800', // Amarelo ClickNotas
+                            600: '#d68f00',
+                            700: '#ab6700',
+                        },
+                        navy: {
+                            50: '#f4f6f8',
+                            100: '#e3e8ee',
+                            200: '#c8d3dd',
+                            300: '#9eb4c6',
+                            400: '#6c8ea7',
+                            500: '#4a708d',
+                            600: '#355670',
+                            700: '#2a455a',
+                            800: '#243a4c',
+                            900: '#0B1120', // Azul Marinho Profundo ClickNotas
+                            950: '#060912',
+                        }
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 24px -4px rgba(11, 17, 32, 0.05)',
+                        'floating': '0 20px 40px -10px rgba(11, 17, 32, 0.1)',
+                        'glow': '0 0 20px rgba(255, 184, 0, 0.3)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #F8FAFC; 
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        h1, h2, h3, h4, h5, h6, .font-logo { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+        }
+
+        /* Animações refinadas de SaaS */
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        .slide-up { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(15px); }
+        .stagger-1 { animation-delay: 0.05s; }
+        .stagger-2 { animation-delay: 0.1s; }
+        .stagger-3 { animation-delay: 0.15s; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
+        
+        /* Scrollbar Premium */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        /* Menu Interativo Premium */
+        .nav-item {
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: -1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 0;
+            width: 4px;
+            background-color: #ffb800;
+            border-radius: 0 4px 4px 0;
+            transition: all 0.3s ease;
+            opacity: 0;
+        }
+        .nav-item.active {
+            background-color: rgba(255, 255, 255, 0.04);
+            color: white;
+            font-weight: 600;
+        }
+        .nav-item.active::before {
+            height: 70%;
+            opacity: 1;
+        }
+        .nav-item.active i {
+            color: #ffb800;
+        }
+
+        /* Toast Notifications */
+        #toast-container { position: fixed; top: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 12px; }
+        .toast { padding: 14px 24px; border-radius: 12px; font-size: 14px; font-weight: 500; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.2); animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; display: flex; align-items: center; gap: 12px; backdrop-filter: blur(10px); }
+        .toast.success { background-color: rgba(22, 163, 74, 0.95); color: white; border: 1px solid rgba(255,255,255,0.1); }
+        .toast.error { background-color: rgba(220, 38, 38, 0.95); color: white; border: 1px solid rgba(255,255,255,0.1); }
+        .toast.fadeOut { animation: fadeOutRight 0.3s ease-in forwards; }
+        
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+
+        /* Estilo da Logo Inline */
+        .logo-star {
+            position: absolute;
+            color: #fff;
+            font-size: 0.45em;
+            top: 25%;
+            left: 20%;
+            transform: rotate(-15deg);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+        
+        .badge-ouro { background: linear-gradient(135deg, #FBBF24 0%, #D97706 100%); color: white; }
+        .badge-prata { background: linear-gradient(135deg, #9CA3AF 0%, #4B5563 100%); color: white; }
+        .badge-bronze { background: linear-gradient(135deg, #B45309 0%, #78350F 100%); color: white; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden selection:bg-brand-300 selection:text-navy-900 text-slate-700">
+
+    <!-- TELA DE LOGIN PREMIUM -->
+    <div id="login-screen" class="fixed inset-0 bg-brand-500 z-50 flex items-center justify-center p-4 transition-all duration-700 ease-in-out">
+        <!-- Padrão de fundo decorativo -->
+        <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#0B1120 1px, transparent 1px); background-size: 30px 30px;"></div>
+        
+        <div class="bg-white rounded-3xl shadow-floating p-10 w-full max-w-[420px] relative z-10 slide-up">
+            <div class="text-center mb-8">
+                <!-- Logotipo ClickNotas Reconstruído -->
+                <div class="flex items-center justify-center text-[42px] font-extrabold tracking-tight mb-2 select-none">
+                    <span class="text-navy-900">click</span>
+                    <div class="relative text-navy-900 flex items-center justify-center" style="margin-left: -2px;">
+                        <span class="relative z-0">n</span>
+                        <i class="fa-solid fa-play logo-star text-white"></i>
+                    </div>
+                    <span class="text-navy-900">otas</span>
+                </div>
+                <div class="inline-flex items-center gap-2 px-3 py-1 bg-navy-50 rounded-full border border-navy-100">
+                    <i class="fa-solid fa-users text-brand-500 text-xs"></i>
+                    <span class="text-[10px] font-bold text-navy-600 uppercase tracking-widest">Portal do Vendedor</span>
+                </div>
+            </div>
+            
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-navy-800 mb-1.5 uppercase tracking-wide">Credencial de Acesso</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                            <i class="fa-regular fa-user"></i>
+                        </div>
+                        <input type="text" id="login-name" required placeholder="Seu Nome Completo" class="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 focus:bg-white transition-all outline-none font-medium text-navy-900">
+                    </div>
+                </div>
+                <div>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                            <i class="fa-regular fa-envelope"></i>
+                        </div>
+                        <input type="email" id="login-email" required placeholder="email@clicknotas.com" class="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 focus:bg-white transition-all outline-none font-medium text-navy-900">
+                    </div>
+                </div>
+                <!-- Cole isso logo abaixo do input de E-mail e antes do botão "Entrar no Sistema" -->
+<div>
+    <div class="relative mt-5">
+        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+            <i class="fa-solid fa-lock"></i>
+        </div>
+        <input type="password" id="login-password" required placeholder="Sua Senha" class="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 focus:bg-white transition-all outline-none font-medium text-navy-900">
+    </div>
+</div>
+
+                
+                <button type="submit" class="w-full bg-navy-900 hover:bg-navy-800 text-white font-bold py-4 rounded-xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center gap-3">
+                    Entrar no Sistema <i class="fa-solid fa-arrow-right-to-bracket text-brand-500"></i>
+                </button>
+            </form>
+            
+            <div class="mt-8 pt-6 border-t border-gray-100 flex items-center justify-center gap-2 text-xs text-gray-400 font-medium">
+                <i class="fa-solid fa-shield-halved text-green-500"></i> Ambiente Seguro e Isolado
+            </div>
+        </div>
+    </div>
+
+    <!-- Container de Notificações -->
+    <div id="toast-container"></div>
+
+    <div id="app-container" class="w-full h-full flex hidden opacity-0 transition-opacity duration-500">
+        
+        <!-- SIDEBAR -->
+        <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 w-[260px] bg-navy-950 flex flex-col z-40 transition-transform duration-300 transform -translate-x-full lg:translate-x-0 shadow-2xl lg:shadow-none border-r border-white/5">
+            <!-- Logo Sidebar -->
+            <div class="h-20 flex items-center justify-between px-6 border-b border-white/10">
+                <div class="flex items-center text-2xl font-extrabold tracking-tight select-none">
+                    <span class="text-white">click</span>
+                    <div class="relative text-white flex items-center justify-center">
+                        <span class="relative z-0">n</span>
+                        <i class="fa-solid fa-play absolute text-brand-500 text-[0.45em] top-[25%] left-[20%] -rotate-15 z-10"></i>
+                    </div>
+                    <span class="text-white">otas</span>
+                </div>
+                <button onclick="toggleSidebar()" class="lg:hidden text-gray-400 hover:text-white transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- Menu Principal -->
+            <div class="flex-1 overflow-y-auto py-8 px-4 flex flex-col gap-1 no-scrollbar">
+                <p class="px-4 text-[10px] font-bold text-navy-400 uppercase tracking-widest mb-2">Visão Geral</p>
+                
+                <button onclick="navigateTo('dashboard')" id="nav-dashboard" class="nav-item active flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:text-white w-full text-left">
+                    <i class="fa-solid fa-chart-line w-5 text-center transition-colors"></i> 
+                    <span class="font-medium text-sm">Início</span>
+                </button>
+                
+                <button onclick="navigateTo('partners')" id="nav-partners" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:text-white w-full text-left">
+                    <i class="fa-solid fa-handshake w-5 text-center transition-colors"></i> 
+                    <span class="font-medium text-sm">Rede de Parceiros</span>
+                </button>
+
+                <p class="px-4 text-[10px] font-bold text-navy-400 uppercase tracking-widest mt-8 mb-2">CRM & Ações</p>
+                
+                <button onclick="navigateTo('agenda')" id="nav-agenda" class="nav-item flex items-center justify-between px-4 py-3 rounded-lg text-gray-400 hover:text-white w-full text-left">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-regular fa-calendar-check w-5 text-center transition-colors"></i> 
+                        <span class="font-medium text-sm">Minha Agenda</span>
+                    </div>
+                    <span id="agenda-badge" class="hidden bg-brand-500 text-navy-900 text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
+                </button>
+            </div>
+
+            <!-- Perfil do Usuário Inferior -->
+            <div class="p-4 border-t border-white/5 bg-navy-900/50">
+                <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/10 group" onclick="logout()">
+                    <div id="nav-user-initial" class="w-10 h-10 rounded-lg bg-navy-800 text-brand-500 border border-white/10 font-bold flex items-center justify-center text-lg shadow-inner group-hover:bg-brand-500 group-hover:text-navy-900 transition-colors">
+                        ?
+                    </div>
+                    <div class="overflow-hidden flex-1">
+                        <span id="nav-user-name" class="text-sm font-semibold text-white truncate block leading-tight">Consultor</span>
+                        <span class="text-xs text-navy-300 truncate block mt-0.5">Vendas & Parcerias</span>
+                    </div>
+                    <i class="fa-solid fa-arrow-right-from-bracket text-navy-500 group-hover:text-white transition-colors"></i>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+            
+            <!-- HEADER -->
+            <header class="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-6 z-30 sticky top-0">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleSidebar()" class="lg:hidden text-slate-500 hover:text-navy-900 transition-colors">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                    <div>
+                        <h1 id="page-title" class="text-xl font-display font-bold text-navy-900 tracking-tight leading-tight">Início</h1>
+                        <p id="page-subtitle" class="text-xs font-medium text-slate-500 mt-0.5">Visão estratégica da sua carteira</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <!-- Global Actions -->
+                    <div class="relative group">
+                        <button class="bg-navy-900 hover:bg-navy-800 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-soft transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-plus text-brand-500"></i> Cadastrar
+                        </button>
+                        <!-- Dropdown -->
+                        <div class="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-floating border border-slate-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-right scale-95 group-hover:scale-100 z-50 overflow-hidden">
+                            <div class="p-2 space-y-1">
+                                <button onclick="openModal('modal-partner')" class="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-xl transition-colors flex items-center gap-3">
+                                    <div class="w-6 h-6 rounded bg-brand-50 text-brand-600 flex items-center justify-center"><i class="fa-solid fa-handshake text-xs"></i></div> Novo Parceiro
+                                </button>
+                                <button onclick="openModal('modal-agenda')" class="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-xl transition-colors flex items-center gap-3">
+                                    <div class="w-6 h-6 rounded bg-blue-50 text-blue-600 flex items-center justify-center"><i class="fa-solid fa-calendar-plus text-xs"></i></div> Nova Reunião/Tarefa
+                                </button>
+                                <div class="h-px bg-slate-100 my-1 mx-2"></div>
+                                <button onclick="importExcel()" class="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-xl transition-colors flex items-center gap-3">
+                                    <div class="w-6 h-6 rounded bg-green-50 text-green-600 flex items-center justify-center"><i class="fa-solid fa-file-excel text-xs"></i></div> Importar Dados
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- CONTEÚDO PRINCIPAL (SCROLL) -->
+            <div class="flex-1 overflow-y-auto p-6 lg:p-8 relative">
+                
+                <div id="view-dashboard" class="max-w-7xl mx-auto space-y-8">
+                    
+                    <!-- Top Metrics -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 slide-up stagger-1">
+                        <!-- Card 1 -->
+                        <div class="bg-white rounded-2xl p-6 shadow-soft border border-slate-100 flex items-center gap-5 hover:shadow-floating transition-shadow cursor-pointer relative overflow-hidden group" onclick="navigateTo('partners')">
+                            <div class="absolute -right-4 -top-4 w-24 h-24 bg-brand-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500"></div>
+                            <div class="w-14 h-14 rounded-2xl bg-navy-900 flex items-center justify-center text-brand-500 shrink-0 shadow-inner relative z-10">
+                                <i class="fa-solid fa-handshake text-2xl"></i>
+                            </div>
+                            <div class="relative z-10">
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Parceiros Vinculados</p>
+                                <div class="flex items-baseline gap-2">
+                                    <h3 class="text-3xl font-display font-bold text-navy-900" id="stat-partners">0</h3>
+                                    <span class="text-xs text-green-500 font-medium bg-green-50 px-2 py-0.5 rounded-full"><i class="fa-solid fa-arrow-trend-up"></i> Ativos</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Card 2 -->
+                        <div class="bg-white rounded-2xl p-6 shadow-soft border border-slate-100 flex items-center gap-5 relative overflow-hidden group">
+                            <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500"></div>
+                            <div class="w-14 h-14 rounded-2xl bg-blue-500 flex items-center justify-center text-white shrink-0 shadow-inner relative z-10">
+                                <i class="fa-solid fa-building-circle-check text-2xl"></i>
+                            </div>
+                            <div class="relative z-10">
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Clientes Indicados</p>
+                                <div class="flex items-baseline gap-2">
+                                    <h3 class="text-3xl font-display font-bold text-navy-900" id="stat-clients">0</h3>
+                                    <span class="text-xs text-slate-500 font-medium">Total na rede</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 3 -->
+                        <div class="bg-gradient-to-br from-brand-400 to-brand-500 rounded-2xl p-6 shadow-soft text-navy-900 flex items-center gap-5 relative overflow-hidden">
+                            <div class="absolute right-0 bottom-0 opacity-20 transform translate-x-4 translate-y-4">
+                                <i class="fa-solid fa-star text-8xl"></i>
+                            </div>
+                            <div class="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-navy-900 shrink-0 border border-white/30 relative z-10">
+                                <i class="fa-solid fa-medal text-2xl"></i>
+                            </div>
+                            <div class="relative z-10">
+                                <p class="text-xs font-bold text-navy-800/80 uppercase tracking-wider mb-1">Status da Rede</p>
+                                <h3 class="text-xl font-display font-bold leading-tight" id="stat-tier">Nível Básico</h3>
+                                <p class="text-xs font-medium text-navy-800 mt-1">Traga mais parceiros para subir</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Widgets Inferiores -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 slide-up stagger-2">
+                        
+                        <!-- Conversão Funil -->
+                        <div class="bg-white rounded-2xl p-6 shadow-soft border border-slate-100 flex flex-col">
+                            <div class="flex items-center justify-between mb-6">
+                                <h4 class="font-display font-bold text-navy-900 flex items-center gap-2"><i class="fa-solid fa-filter text-brand-500"></i> Funil de Indicações</h4>
+                            </div>
+                            <div class="flex-1 flex flex-col justify-center gap-4">
+                                <div class="bg-slate-50 rounded-xl p-4 flex items-center justify-between border border-slate-100">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><i class="fa-solid fa-comments"></i></div>
+                                        <div>
+                                            <p class="text-sm font-bold text-navy-900">Em Negociação</p>
+                                            <p class="text-xs text-slate-500">Leads quentes dos parceiros</p>
+                                        </div>
+                                    </div>
+                                    <span id="dash-status-negociacao" class="text-2xl font-display font-bold text-navy-900">0</span>
+                                </div>
+                                <div class="bg-green-50 rounded-xl p-4 flex items-center justify-between border border-green-100">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-green-200 text-green-700 flex items-center justify-center"><i class="fa-solid fa-check-double"></i></div>
+                                        <div>
+                                            <p class="text-sm font-bold text-green-900">Licenças Ativas</p>
+                                            <p class="text-xs text-green-700/70">Clientes já implantados</p>
+                                        </div>
+                                    </div>
+                                    <span id="dash-status-ativo" class="text-2xl font-display font-bold text-green-700">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Top Parceiros -->
+                        <div class="bg-white rounded-2xl p-6 shadow-soft border border-slate-100 flex flex-col h-[340px]">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="font-display font-bold text-navy-900 flex items-center gap-2"><i class="fa-solid fa-trophy text-brand-500"></i> Top Parceiros (Ouro)</h4>
+                            </div>
+                            <div id="dash-ranking-list" class="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                                <!-- Preenchido via JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-partners" class="max-w-7xl mx-auto hidden space-y-6">
+                    <div class="bg-white p-4 rounded-2xl shadow-soft border border-slate-100 flex flex-col md:flex-row gap-4 items-center justify-between slide-up">
+                        <div class="relative w-full md:w-96">
+                            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" id="search-partners" onkeyup="filterPartners()" placeholder="Buscar parceiro por nome, CNPJ ou nicho..." class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all outline-none text-sm font-medium">
+                        </div>
+                        <div class="flex gap-2 w-full md:w-auto p-1 bg-slate-100 rounded-xl overflow-x-auto no-scrollbar">
+                            <button onclick="filterByOwnership('all')" id="btn-filter-all" class="px-4 py-2 rounded-lg text-sm font-semibold bg-white text-navy-900 shadow-sm transition-all whitespace-nowrap flex-1 md:flex-none text-center">Toda a Rede</button>
+                            <button onclick="filterByOwnership('mine')" id="btn-filter-mine" class="px-4 py-2 rounded-lg text-sm font-semibold text-slate-500 hover:text-navy-900 transition-all whitespace-nowrap flex-1 md:flex-none text-center">Minha Carteira</button>
+                            <button onclick="filterByOwnership('available')" id="btn-filter-avail" class="px-4 py-2 rounded-lg text-sm font-semibold text-slate-500 hover:text-navy-900 transition-all whitespace-nowrap flex-1 md:flex-none text-center">Disponíveis <span class="bg-brand-500 text-navy-900 text-[10px] px-1.5 py-0.5 rounded ml-1">Livre</span></button>
+                        </div>
+                    </div>
+
+                    <div id="partners-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 slide-up stagger-1">
+                        <!-- Cards injetados via JS -->
+                    </div>
+                </div>
+
+                <div id="view-partner-details" class="max-w-7xl mx-auto hidden space-y-6">
+                    <!-- Profile Header -->
+                    <div class="bg-white rounded-3xl shadow-soft border border-slate-100 overflow-hidden slide-up">
+                        <div class="h-32 bg-navy-950 relative">
+                            <!-- Padrão bg -->
+                            <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 20px 20px;"></div>
+                            
+                            <button onclick="navigateTo('partners')" class="absolute top-6 left-6 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-sm font-semibold backdrop-blur-md transition-colors flex items-center gap-2 border border-white/10">
+                                <i class="fa-solid fa-arrow-left"></i> Voltar
+                            </button>
+                            
+                            <!-- Badges -->
+                            <div class="absolute top-6 right-6 flex gap-2">
+                                <div id="detail-tier-badge" class="badge-bronze px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg">
+                                    <i class="fa-solid fa-medal"></i> Parceiro Prata
+                                </div>
+                                <div id="detail-owner-badge" class="bg-white/10 backdrop-blur-md border border-white/20 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5">
+                                    <i class="fa-solid fa-lock"></i> Carteira de João
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="px-8 pb-8 relative">
+                            <div class="flex flex-col sm:flex-row gap-6 items-start sm:items-end -mt-12">
+                                <div id="detail-partner-initial" class="w-28 h-28 rounded-2xl bg-brand-500 text-navy-900 border-4 border-white font-display font-extrabold flex items-center justify-center text-5xl shadow-lg shrink-0">
+                                    ?
+                                </div>
+                                <div class="flex-1 min-w-0 pb-1 pt-4 sm:pt-0">
+                                    <h2 id="detail-partner-name" class="text-3xl font-display font-bold text-navy-900 truncate mb-2">Nome do Parceiro</h2>
+                                    <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500 font-medium">
+                                        <span class="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wide" id="detail-partner-sector">Setor</span>
+                                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-id-card text-slate-400"></i> <span id="detail-partner-doc">-</span></span>
+                                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-envelope text-slate-400"></i> <span id="detail-partner-email">-</span></span>
+                                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-phone text-slate-400"></i> <span id="detail-partner-phone">-</span></span>
+                                    </div>
+                                </div>
+                                
+                                <div id="detail-action-container" class="w-full sm:w-auto flex shrink-0 pb-1">
+                                    <!-- JS injeta botão Vincular ou Add Cliente -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Layout Principal do Perfil: 2 Colunas -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 slide-up stagger-1 relative">
+                        
+                        <!-- Overlay de Bloqueio -->
+                        <div id="detail-lock-overlay" class="hidden absolute inset-0 bg-white/40 backdrop-blur-sm z-20 flex flex-col items-center justify-center rounded-3xl m-2">
+                            <div class="bg-white p-8 rounded-3xl shadow-floating border border-slate-100 text-center max-w-sm">
+                                <div class="w-16 h-16 bg-slate-50 text-slate-400 border border-slate-100 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4">
+                                    <i class="fa-solid fa-lock"></i>
+                                </div>
+                                <h3 class="font-display font-bold text-navy-900 text-lg mb-2">Acesso Restrito</h3>
+                                <p class="text-sm text-slate-500">Este parceiro está vinculado a outro consultor. Apenas o responsável pode ver e gerenciar os clientes.</p>
+                            </div>
+                        </div>
+
+                        <!-- Coluna Maior: Clientes -->
+                        <div class="lg:col-span-2 space-y-6">
+                            <div class="bg-white rounded-3xl shadow-soft border border-slate-100 p-6">
+                                <div class="flex items-center justify-between mb-6">
+                                    <h3 class="font-display font-bold text-navy-900 flex items-center gap-2"><i class="fa-solid fa-users text-brand-500"></i> Indicações Ativas</h3>
+                                    <span id="detail-client-count" class="bg-navy-50 text-navy-600 px-3 py-1 rounded-lg text-xs font-bold">0 clientes</span>
+                                </div>
+                                
+                                <div class="overflow-x-auto rounded-xl border border-slate-100">
+                                    <table class="w-full text-left border-collapse min-w-[600px]">
+                                        <thead>
+                                            <tr class="bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                                <th class="px-5 py-4">Empresa Indicada</th>
+                                                <th class="px-5 py-4">Serviço ClickNotas</th>
+                                                <th class="px-5 py-4">Integração</th>
+                                                <th class="px-5 py-4 text-center">Status</th>
+                                                <th class="px-5 py-4 text-right">Ação</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="detail-clients-list" class="divide-y divide-slate-50 bg-white">
+                                            <!-- Injetado via JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Coluna Menor: Info & Notas -->
+                        <div class="space-y-6">
+                            <!-- Histórico -->
+                            <div class="bg-white rounded-3xl shadow-soft border border-slate-100 p-6">
+                                <h3 class="font-display font-bold text-navy-900 mb-4 flex items-center gap-2"><i class="fa-solid fa-file-lines text-slate-400"></i> Notas e Histórico</h3>
+                                <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                                    <p id="detail-partner-notes" class="text-slate-600 text-sm whitespace-pre-wrap leading-relaxed min-h-[100px]">Nenhuma informação adicional.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-agenda" class="max-w-4xl mx-auto hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-soft border border-slate-100 slide-up">
+                        <div>
+                            <h3 class="font-display font-bold text-navy-900 text-lg">Próximos Compromissos</h3>
+                            <p class="text-sm text-slate-500">Acompanhe retornos, reuniões de implantação e follow-ups.</p>
+                        </div>
+                        <button onclick="openModal('modal-agenda')" class="bg-brand-500 text-navy-900 px-5 py-2.5 rounded-xl text-sm font-semibold shadow-soft hover:bg-brand-600 transition-colors flex items-center gap-2 w-full sm:w-auto justify-center">
+                            <i class="fa-solid fa-plus"></i> Agendar Tarefa
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-soft border border-slate-100 overflow-hidden slide-up stagger-1">
+                        <div id="agenda-full-list" class="divide-y divide-slate-50">
+                            <!-- Injetado via JS -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Parceiro -->
+    <div id="modal-partner" class="fixed inset-0 bg-navy-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-white rounded-3xl shadow-floating w-full max-w-lg transform scale-95 transition-transform duration-300 overflow-hidden flex flex-col max-h-[90vh]" id="modal-partner-content">
+            <div class="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 class="text-lg font-display font-bold text-navy-900 flex items-center gap-2"><i class="fa-solid fa-handshake text-brand-500"></i> Novo Parceiro ClickNotas</h3>
+                <button onclick="closeModal('modal-partner')" class="text-slate-400 hover:text-red-500 transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-8 overflow-y-auto custom-scrollbar flex-1">
+                <form id="form-partner" onsubmit="savePartner(event)" class="space-y-5">
+                    <input type="hidden" id="partner-id">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Razão Social / Nome Fantasia *</label>
+                        <input type="text" id="partner-name" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all outline-none font-medium text-slate-700">
+                    </div>
+                    <div class="grid grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">CNPJ/CPF</label>
+                            <input type="text" id="partner-doc" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Segmento</label>
+                            <select id="partner-sector" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all outline-none text-sm font-medium">
+                                <option value="Contabilidade">Escritório de Contabilidade</option>
+                                <option value="Desenvolvedor de Software">Desenvolvedor de Software</option>
+                                <option value="Consultoria Empresarial">Consultoria Empresarial</option>
+                                <option value="Agência de Marketing">Agência de Marketing</option>
+                                <option value="Associação Comercial">Associação Comercial</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">E-mail</label>
+                            <input type="email" id="partner-email" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Telefone/WhatsApp</label>
+                            <input type="text" id="partner-phone" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all outline-none text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Anotações / Contexto</label>
+                        <textarea id="partner-notes" rows="3" placeholder="Como conheceu o ClickNotas? Qual o perfil dos clientes dele?" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all outline-none text-sm resize-none"></textarea>
+                    </div>
+                    <div class="pt-4 flex justify-end gap-3 mt-4">
+                        <button type="button" onclick="closeModal('modal-partner')" class="px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">Cancelar</button>
+                        <button type="submit" class="px-6 py-3 text-sm font-bold bg-navy-900 text-white rounded-xl hover:bg-navy-800 transition-colors shadow-soft">Salvar Perfil</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Cliente -->
+    <div id="modal-client" class="fixed inset-0 bg-navy-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-white rounded-3xl shadow-floating w-full max-w-lg transform scale-95 transition-transform duration-300 overflow-hidden flex flex-col max-h-[90vh]" id="modal-client-content">
+            <div class="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-brand-50">
+                <h3 class="text-lg font-display font-bold text-navy-900 flex items-center gap-2"><i class="fa-solid fa-user-plus text-brand-600"></i> Indicar Cliente (Lead)</h3>
+                <button onclick="closeModal('modal-client')" class="text-slate-400 hover:text-red-500 transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-8 overflow-y-auto custom-scrollbar flex-1">
+                <form id="form-client" onsubmit="saveClient(event)" class="space-y-5">
+                    <input type="hidden" id="client-id">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Nome da Empresa / CNPJ *</label>
+                        <input type="text" id="client-company" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all outline-none font-medium text-slate-700">
+                    </div>
+                    <div class="grid grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Serviço Desejado *</label>
+                            <select id="client-plan" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all outline-none text-sm font-medium">
+                                <option value="Emissor NF-e Web">Emissor NF-e Web</option>
+                                <option value="Certificado Digital A1">Certificado Digital A1</option>
+                                <option value="Certificado Digital A3">Certificado Digital A3</option>
+                                <option value="Sistema ERP Completo">Sistema ERP Completo</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Integração</label>
+                            <select id="client-integration" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all outline-none text-sm font-medium">
+                                <option value="Manual / Digitação">Manual / Digitação</option>
+                                <option value="Integração via API">Integração via API</option>
+                                <option value="Integração ERP">Integração ERP</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Status da Implantação *</label>
+                        <select id="client-status" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all outline-none text-sm font-bold text-navy-900">
+                            <option value="Em Negociação">Em Negociação (Aguardando Retorno)</option>
+                            <option value="Fechado">Fechado (Licença Ativa)</option>
+                            <option value="Inativo">Inativo / Perdido</option>
+                        </select>
+                    </div>
+                    <div class="pt-4 flex justify-end gap-3 mt-4">
+                        <button type="button" onclick="closeModal('modal-client')" class="px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">Cancelar</button>
+                        <button type="submit" class="px-6 py-3 text-sm font-bold bg-brand-500 text-navy-900 rounded-xl hover:bg-brand-600 transition-colors shadow-soft">Salvar Cliente</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Agenda -->
+    <div id="modal-agenda" class="fixed inset-0 bg-navy-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-white rounded-3xl shadow-floating w-full max-w-sm transform scale-95 transition-transform duration-300 overflow-hidden flex flex-col" id="modal-agenda-content">
+            <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-blue-50">
+                <h3 class="text-lg font-display font-bold text-navy-900 flex items-center gap-2"><i class="fa-regular fa-calendar-plus text-blue-600"></i> Agendar Tarefa</h3>
+                <button onclick="closeModal('modal-agenda')" class="text-slate-400 hover:text-red-500 transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-6">
+                <form id="form-agenda" onsubmit="saveTask(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Título da Tarefa *</label>
+                        <input type="text" id="task-title" required placeholder="Reunião de alinhamento..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 transition-all outline-none font-medium text-slate-700 text-sm">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Data *</label>
+                            <input type="date" id="task-date" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 transition-all outline-none text-sm text-slate-600">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Hora</label>
+                            <input type="time" id="task-time" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 transition-all outline-none text-sm text-slate-600">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Vincular a Parceiro</label>
+                        <select id="task-partner" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 transition-all outline-none text-sm font-medium text-slate-600">
+                            <option value="">Nenhum parceiro</option>
+                            <!-- JS Inject -->
+                        </select>
+                    </div>
+                    <div class="pt-4 mt-2">
+                        <button type="submit" class="w-full py-3.5 text-sm font-bold bg-navy-900 text-white rounded-xl hover:bg-navy-800 transition-colors shadow-soft">Adicionar à Agenda</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+     // Inicializando o Banco de Dados (Substitua pelas suas chaves do Supabase!)
+const supabaseUrl = 'https://zyuudhlhysdnhxflhawh.supabase.co';
+     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5dXVkaGxoeXNkbmh4ZmxoYXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NjcyNzgsImV4cCI6MjEwNDQ0MzI3OH0.ibnnfcnQWM9WVF2Pwu_psf7LJq-pKEfvPn1kfat7nOU';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // Variáveis Globais (Agora vazias, pois virão do banco)
+        let currentUser = null; 
+        let currentActivePartnerId = null;
+        let currentFilter = 'all';
+
+        let partners = [];
+        let clients = [];
+        let tasks = [];
+        
+        window.onload = function() {
+            console.log("Portal de Parceiros ClickNotas Inicializado (Modo Local).");
+        };
+
+        // Função de Notificação Elegante
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-check-circle' : 'fa-circle-exclamation'} text-lg"></i> <span>${msg}</span>`;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('fadeOut');
+                setTimeout(() => toast.remove(), 400);
+            }, 3500);
+        }
+
+      async function handleLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    
+    showToast('Autenticando...', 'success');
+
+    // Tenta logar no Supabase de verdade
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+    });
+
+    if (error) {
+        showToast('Erro ao entrar: Verifique e-mail e senha.', 'error');
+        return; // Para o código aqui se a senha estiver errada
+    }
+
+    // Se a senha estiver certa, pega os dados oficiais do banco
+    // Usamos a primeira parte do e-mail como nome caso ele não tenha nome cadastrado
+    const userName = data.user.user_metadata?.name || email.split('@')[0];
+    
+    currentUser = { uid: data.user.id, email: data.user.email, name: userName };
+
+    // Atualiza a interface com os dados do usuário
+    document.getElementById('nav-user-name').textContent = currentUser.name;
+    document.getElementById('nav-user-initial').textContent = currentUser.name.charAt(0).toUpperCase();
+
+    // Faz a transição de tela original (animação)
+    const login = document.getElementById('login-screen');
+    login.style.opacity = '0';
+    setTimeout(() => {
+        login.classList.add('hidden');
+        const app = document.getElementById('app-container');
+        app.classList.remove('hidden');
+        setTimeout(() => app.classList.remove('opacity-0'), 50);
+        
+        initSystem(); // Inicia o sistema baixando os dados da nuvem
+    }, 600);
+}
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('app-container').classList.add('hidden', 'opacity-0');
+            const login = document.getElementById('login-screen');
+            login.classList.remove('hidden');
+            document.getElementById('login-form').reset();
+            setTimeout(() => login.style.opacity = '1', 50);
+        }
+
+       function initSystem() {
+            navigateTo('dashboard');
+            fetchInitialData(); // Chama a função que busca os dados na nuvem
+        }
+
+        async function fetchInitialData() {
+            showToast('Sincronizando com a nuvem...', 'success');
+            
+            // Puxa parceiros, clientes e tarefas do Supabase
+            const { data: pData } = await supabase.from('partners').select('*');
+            const { data: cData } = await supabase.from('clients').select('*');
+            const { data: tData } = await supabase.from('tasks').select('*');
+            
+            // Preenche as listas com os dados reais
+            partners = pData || [];
+            clients = cData || [];
+            tasks = tData || [];
+            
+            // Atualiza a tela
+            updateDashboard();
+            if(!document.getElementById('view-partners').classList.contains('hidden')) renderGlobalPartners();
+            populateTaskPartnerSelect();
+        }
+
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            if (sb.classList.contains('-translate-x-full')) {
+                sb.classList.remove('-translate-x-full');
+            } else {
+                sb.classList.add('-translate-x-full');
+            }
+        }
+
+        // Navegação Padrão
+        const views = ['dashboard', 'partners', 'partner-details', 'agenda'];
+        function navigateTo(viewId) {
+            views.forEach(v => {
+                const el = document.getElementById('view-' + v);
+                if (el) el.classList.add('hidden');
+            });
+            
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('active', 'text-white');
+                el.classList.add('text-gray-400');
+            });
+
+            const target = document.getElementById('view-' + viewId);
+            if (target) target.classList.remove('hidden');
+
+            const titles = {
+                'dashboard': ['Início', 'Visão estratégica da sua carteira'],
+                'partners': ['Rede de Parceiros', 'Hub global de indicações'],
+                'agenda': ['Minha Agenda', 'Controle de follow-ups e reuniões']
+            };
+
+            if (titles[viewId]) {
+                document.getElementById('page-title').textContent = titles[viewId][0];
+                document.getElementById('page-subtitle').textContent = titles[viewId][1];
+                const nav = document.getElementById('nav-' + viewId);
+                if(nav) { nav.classList.add('active', 'text-white'); nav.classList.remove('text-gray-400'); }
+            }
+
+            if (viewId === 'dashboard') updateDashboard();
+            if (viewId === 'partners') renderGlobalPartners();
+            if (viewId === 'agenda') renderAgendaList();
+            
+            if(window.innerWidth < 1024) document.getElementById('sidebar').classList.add('-translate-x-full');
+        }
+
+        // Determina Nível de Parceiro (Gamificação CRM)
+        function getPartnerTier(activeClientsCount) {
+            if (activeClientsCount >= 6) return { name: 'Parceiro Ouro', class: 'badge-ouro', icon: 'fa-medal' };
+            if (activeClientsCount >= 3) return { name: 'Parceiro Prata', class: 'badge-prata', icon: 'fa-medal' };
+            return { name: 'Parceiro Bronze', class: 'badge-bronze', icon: 'fa-certificate' };
+        }
+
+        // Atualiza Dashboard Principal
+        function updateDashboard() {
+            if(!currentUser) return;
+            
+            const myPartners = partners.filter(p => p.ownerId === currentUser.uid);
+            const myPIds = myPartners.map(p => p.id);
+            const myClients = clients.filter(c => myPIds.includes(c.partnerId));
+
+            const elStatP = document.getElementById('stat-partners');
+            if (elStatP) elStatP.textContent = myPartners.length;
+            const elStatC = document.getElementById('stat-clients');
+            if (elStatC) elStatC.textContent = myClients.length;
+
+            const ativos = myClients.filter(c => c.status === 'Ativo' || c.status === 'Fechado').length;
+            const negociacao = myClients.filter(c => c.status === 'Negociação' || c.status === 'Em Negociação').length;
+            
+            const elAtivo = document.getElementById('dash-status-ativo');
+            if(elAtivo) elAtivo.textContent = ativos;
+            const elNegoc = document.getElementById('dash-status-negociacao');
+            if(elNegoc) elNegoc.textContent = negociacao;
+
+            // Define seu nível como Vendedor baseado no total de clientes ativos da carteira
+            const elTier = document.getElementById('stat-tier');
+            if(elTier) {
+                if(ativos >= 20) elTier.textContent = "Elite ClickNotas";
+                else if (ativos >= 10) elTier.textContent = "Especialista";
+                else elTier.textContent = "Nível Básico";
+            }
+
+            // Ranking Ouro
+            const rankingList = document.getElementById('dash-ranking-list');
+            if (rankingList) {
+                const pStats = myPartners.map(p => {
+                    const count = myClients.filter(c => c.partnerId === p.id && (c.status === 'Ativo' || c.status === 'Fechado')).length;
+                    return { ...p, activeCount: count };
+                }).filter(p => p.activeCount >= 3).sort((a, b) => b.activeCount - a.activeCount).slice(0, 4); // Apenas prata e ouro
+
+                if (pStats.length === 0) {
+                    rankingList.innerHTML = `
+                        <div class="flex flex-col items-center justify-center py-10 text-slate-300">
+                            <i class="fa-solid fa-ranking-star text-4xl mb-3"></i>
+                            <p class="text-sm font-medium">Você ainda não possui parceiros Nível Ouro ou Prata.</p>
+                        </div>`;
+                } else {
+                    rankingList.innerHTML = '';
+                    pStats.forEach((p, i) => {
+                        const tier = getPartnerTier(p.activeCount);
+                        rankingList.innerHTML += `
+                            <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer border border-transparent hover:border-slate-100" onclick="openPartnerDetailsSafe('${p.id}')">
+                                <div class="w-10 h-10 rounded-xl ${tier.class} flex items-center justify-center shadow-inner"><i class="fa-solid ${tier.icon}"></i></div>
+                                <div class="flex-1 min-w-0">
+                                    <h5 class="text-sm font-bold text-navy-900 truncate">${p.name}</h5>
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">${p.sector || 'Geral'}</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xl font-display font-black text-brand-500 block leading-none">${p.activeCount}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            }
+            updateAgendaBadge();
+        }
+
+        // Renderiza Grid de Parceiros
+        function renderGlobalPartners() {
+            const grid = document.getElementById('partners-grid');
+            if(!grid) return;
+            grid.innerHTML = '';
+            
+            const searchTerm = document.getElementById('search-partners')?.value.toLowerCase() || '';
+            
+            let filtered = partners.filter(p => {
+                const matchSearch = p.name.toLowerCase().includes(searchTerm) || p.doc.includes(searchTerm) || (p.sector && p.sector.toLowerCase().includes(searchTerm));
+                if (!matchSearch) return false;
+                
+                if (currentFilter === 'mine') return p.ownerId === currentUser.uid;
+                if (currentFilter === 'available') return p.ownerId === null;
+                return true; 
+            });
+
+            if(filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full py-20 text-center text-slate-400"><i class="fa-solid fa-box-open text-4xl mb-3 opacity-50"></i><p class="font-medium">Nenhum parceiro encontrado nesta categoria.</p></div>`;
+                return;
+            }
+
+            filtered.forEach(p => {
+                const isMine = p.ownerId === currentUser.uid;
+                const isAvailable = p.ownerId === null;
+                const activeClientsCount = clients.filter(c => c.partnerId === p.id && (c.status === 'Ativo' || c.status === 'Fechado')).length;
+                
+                let statusBadge = '';
+                if(isAvailable) {
+                    statusBadge = `<span class="bg-brand-50 text-brand-600 border border-brand-200 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider"><i class="fa-solid fa-unlock mr-1"></i> Livre</span>`;
+                } else if (isMine) {
+                    statusBadge = `<span class="bg-green-50 text-green-600 border border-green-200 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider"><i class="fa-solid fa-check mr-1"></i> Minha Carteira</span>`;
+                } else {
+                    statusBadge = `<span class="bg-slate-200 text-slate-600 border border-slate-300 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider"><i class="fa-solid fa-lock mr-1"></i> Exclusivo</span>`;
+                }
+
+                const tier = getPartnerTier(activeClientsCount);
+                
+                let footer = '';
+                let clickAction = `onclick="openPartnerDetailsSafe('${p.id}')"`;
+                let cardClasses = `bg-white rounded-3xl p-6 shadow-soft border border-slate-100 hover:shadow-floating transition-all duration-300 cursor-pointer transform hover:-translate-y-1 relative`;
+
+                if(isAvailable) {
+                    footer = `<button onclick="claimPartner(event, '${p.id}')" class="w-full mt-4 bg-brand-500 text-navy-900 font-bold py-2.5 rounded-xl text-sm hover:bg-brand-600 transition-colors shadow-soft">Vincular a Mim</button>`;
+                } else {
+                    const ownerText = isMine ? 'Você' : (p.ownerName || 'Outro Consultor');
+                    footer = `<div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-md bg-navy-50 border border-navy-100 text-navy-600 flex items-center justify-center text-[10px] font-bold">${ownerText.charAt(0).toUpperCase()}</div>
+                                    <span class="text-xs text-slate-600 font-semibold truncate max-w-[100px]">${ownerText}</span>
+                                </div>
+                                <span class="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded uppercase">${activeClientsCount} Clientes</span>
+                              </div>`;
+                    
+                    // Bloqueio Total para outros vendedores
+                    if (!isMine) {
+                        clickAction = `onclick="showToast('Acesso negado. Este parceiro é exclusivo de ${p.ownerName}.', 'error')"`;
+                        cardClasses = `bg-slate-50 rounded-3xl p-6 shadow-sm border border-slate-200 opacity-90 cursor-not-allowed relative`;
+                    }
+                }
+
+                grid.innerHTML += `
+                    <div class="${cardClasses}" ${clickAction}>
+                        <div class="absolute top-5 right-5">${statusBadge}</div>
+                        <div class="w-12 h-12 rounded-xl bg-navy-900 text-brand-500 flex items-center justify-center text-xl font-display font-extrabold mb-4 shadow-inner">${p.name.charAt(0).toUpperCase()}</div>
+                        <h3 class="font-bold text-navy-900 truncate mb-1 pr-16">${p.name}</h3>
+                        <p class="text-xs text-slate-500 mb-3 font-medium flex items-center gap-1.5"><i class="fa-solid fa-briefcase text-slate-300"></i> ${p.sector || 'Geral'}</p>
+                        ${!isAvailable ? `<div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold ${tier.class}"><i class="fa-solid ${tier.icon}"></i> ${tier.name}</div>` : ''}
+                        ${footer}
+                    </div>
+                `;
+            });
+        }
+
+        function filterPartners() { renderGlobalPartners(); }
+        function filterByOwnership(type) {
+            currentFilter = type;
+            document.querySelectorAll('#btn-filter-all, #btn-filter-mine, #btn-filter-avail').forEach(b => {
+                b.classList.remove('bg-white', 'text-navy-900', 'shadow-sm');
+                b.classList.add('text-slate-500');
+            });
+            const btnMap = {'all':'btn-filter-all', 'mine':'btn-filter-mine', 'available':'btn-filter-avail'};
+            const btn = document.getElementById(btnMap[type]);
+            if(btn) {
+                btn.classList.add('bg-white', 'text-navy-900', 'shadow-sm');
+                btn.classList.remove('text-slate-500');
+            }
+            renderGlobalPartners();
+        }
+
+        // Vincular Parceiro (Hub)
+        function claimPartner(e, partnerId) {
+            e.stopPropagation(); 
+            if(!currentUser) return;
+            const p = partners.find(x => x.id === partnerId);
+            if(p && p.ownerId === null) {
+                p.ownerId = currentUser.uid;
+                p.ownerName = currentUser.name;
+                showToast(`Parceiro vinculado à sua carteira com sucesso!`, 'success');
+                renderGlobalPartners();
+                updateDashboard();
+                populateTaskPartnerSelect();
+            }
+        }
+
+        // Abrir Perfil Profundo do Parceiro
+        function openPartnerDetailsSafe(id) {
+            currentActivePartnerId = id;
+            const partner = partners.find(p => p.id === id);
+            if(!partner) return;
+
+            document.getElementById('page-title').textContent = partner.name;
+            document.getElementById('page-subtitle').textContent = "Perfil de Indicação";
+            document.getElementById('detail-partner-name').textContent = partner.name;
+            document.getElementById('detail-partner-initial').textContent = partner.name.charAt(0).toUpperCase();
+            document.getElementById('detail-partner-sector').textContent = partner.sector || 'Geral';
+            document.getElementById('detail-partner-doc').textContent = partner.doc || 'CPF/CNPJ Indisponível';
+            document.getElementById('detail-partner-email').textContent = partner.email || 'Não informado';
+            document.getElementById('detail-partner-phone').textContent = partner.phone || 'Não informado';
+            document.getElementById('detail-partner-notes').textContent = partner.notes || 'Nenhuma anotação contextual para este parceiro.';
+
+            const isMine = partner.ownerId === currentUser.uid;
+            const isAvailable = partner.ownerId === null;
+            
+            const badge = document.getElementById('detail-owner-badge');
+            const overlay = document.getElementById('detail-lock-overlay');
+            const actions = document.getElementById('detail-action-container');
+            const tierBadge = document.getElementById('detail-tier-badge');
+
+            // Calcula Nível
+            const activeCount = clients.filter(c => c.partnerId === partner.id && (c.status === 'Ativo' || c.status === 'Fechado')).length;
+            const tier = getPartnerTier(activeCount);
+            
+            if(isAvailable) tierBadge.classList.add('hidden');
+            else {
+                tierBadge.classList.remove('hidden');
+                tierBadge.className = `px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg ${tier.class}`;
+                tierBadge.innerHTML = `<i class="fa-solid ${tier.icon}"></i> ${tier.name}`;
+            }
+
+            // Permissões
+            if(isAvailable) {
+                badge.innerHTML = '<i class="fa-solid fa-unlock"></i> Livre para Prospecção';
+                badge.className = 'bg-brand-500 text-navy-900 border border-brand-400 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg';
+                overlay.classList.remove('hidden');
+                actions.innerHTML = `<button onclick="claimPartner(event, '${id}')" class="bg-brand-500 text-navy-900 px-6 py-3 rounded-xl font-bold shadow-soft hover:bg-brand-600 transition-colors w-full sm:w-auto mt-4 sm:mt-0">Vincular a Minha Carteira</button>`;
+            } else if (isMine) {
+                badge.innerHTML = '<i class="fa-solid fa-check"></i> Sob sua gestão';
+                badge.className = 'bg-green-500 text-white border border-green-400 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg';
+                overlay.classList.add('hidden');
+                actions.innerHTML = `
+                    <div class="flex flex-col sm:flex-row gap-2 w-full mt-4 sm:mt-0">
+                        <button onclick="editPartner('${id}')" class="bg-white text-slate-600 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-2" title="Editar Parceiro"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="unlinkPartner('${id}')" class="bg-white text-red-500 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-red-50 hover:border-red-100 transition-colors flex items-center justify-center gap-2" title="Desvincular Carteira"><i class="fa-solid fa-link-slash"></i></button>
+                        <button onclick="openModal('modal-client')" class="bg-navy-900 text-white px-6 py-3 rounded-xl font-bold shadow-soft hover:bg-navy-800 transition-colors flex items-center justify-center gap-2 flex-1"><i class="fa-solid fa-plus text-brand-500"></i> Nova Indicação</button>
+                    </div>
+                `;
+            } else {
+                badge.innerHTML = `<i class="fa-solid fa-lock"></i> Gestão de ${partner.ownerName}`;
+                badge.className = 'bg-slate-800 text-white border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg';
+                overlay.classList.remove('hidden');
+                actions.innerHTML = '';
+            }
+
+            renderPartnerClients();
+            navigateTo('partner-details');
+        }
+
+        // Renderiza Lista de Clientes Premium
+        function renderPartnerClients() {
+            const list = document.getElementById('detail-clients-list');
+            const countLabel = document.getElementById('detail-client-count');
+            if(!list) return;
+            const pClients = clients.filter(c => c.partnerId === currentActivePartnerId);
+            
+            countLabel.textContent = `${pClients.length} indicações`;
+
+            if(pClients.length === 0) {
+                list.innerHTML = `<tr><td colspan="5" class="px-5 py-12 text-center text-slate-400 italic">Nenhuma indicação registrada para este parceiro.</td></tr>`;
+                return;
+            }
+
+            list.innerHTML = '';
+            pClients.forEach(c => {
+                let badge = '';
+                if(c.status === 'Ativo' || c.status === 'Fechado') {
+                    badge = '<span class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md bg-green-50 text-green-700 border border-green-100">Implantado</span>';
+                } else if (c.status === 'Negociação' || c.status === 'Em Negociação') {
+                    badge = '<span class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md bg-brand-50 text-brand-700 border border-brand-100">Negociação</span>';
+                } else {
+                    badge = '<span class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md bg-slate-100 text-slate-500 border border-slate-200">Perdido</span>';
+                }
+
+                list.innerHTML += `
+                    <tr class="hover:bg-slate-50/50 transition-colors group">
+                        <td class="px-5 py-4">
+                            <div class="text-sm font-bold text-navy-900">${c.company}</div>
+                        </td>
+                        <td class="px-5 py-4 text-xs font-semibold text-slate-700">${c.plan || '-'}</td>
+                        <td class="px-5 py-4 text-xs text-slate-500"><i class="fa-solid fa-link text-slate-300 mr-1"></i> ${c.integration || '-'}</td>
+                        <td class="px-5 py-4 text-center">${badge}</td>
+                        <td class="px-5 py-4 text-right">
+                            <div class="flex items-center justify-end gap-1">
+                                <button onclick="editClient('${c.id}')" class="text-slate-400 hover:text-brand-600 transition-colors p-2 rounded-lg hover:bg-brand-50" title="Editar Indicação"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteClient('${c.id}')" class="text-slate-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50" title="Remover Indicação"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderAgendaList() {
+            const list = document.getElementById('agenda-full-list');
+            if(!list) return;
+            const myTasks = tasks.filter(t => t.ownerId === currentUser.uid).sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            if(myTasks.length === 0) {
+                list.innerHTML = `<div class="p-10 text-center text-slate-400"><i class="fa-regular fa-calendar-check text-4xl mb-3 opacity-50"></i><p class="text-sm font-medium">Tudo limpo! Nenhuma tarefa pendente.</p></div>`;
+                return;
+            }
+
+            list.innerHTML = '';
+            myTasks.forEach(t => {
+                const dateObj = new Date(t.date + 'T00:00:00');
+                const p = partners.find(x => x.id === t.partnerId);
+                const pTag = p ? `<span class="mt-2 inline-flex items-center gap-1.5 bg-slate-50 text-slate-600 text-xs font-semibold px-2 py-1 rounded-md border border-slate-200"><i class="fa-solid fa-handshake text-brand-500"></i> ${p.name}</span>` : '';
+                
+                list.innerHTML += `
+                    <div class="p-5 flex items-start gap-5 hover:bg-slate-50 transition-colors">
+                        <div class="w-14 h-14 bg-blue-50 rounded-2xl border border-blue-100 flex flex-col items-center justify-center shrink-0">
+                            <span class="text-[10px] font-bold text-blue-500 uppercase tracking-widest leading-none">${dateObj.toLocaleString('pt-BR', {month:'short'})}</span>
+                            <span class="text-xl font-display font-bold text-navy-900 leading-none mt-1">${dateObj.getDate()}</span>
+                        </div>
+                        <div class="flex-1 min-w-0 pt-0.5">
+                            <h4 class="text-sm font-bold text-navy-900">${t.title}</h4>
+                            <div class="flex items-center gap-3 text-xs text-slate-500 mt-1 font-medium">
+                                <span><i class="fa-regular fa-clock text-slate-400 mr-1"></i> ${t.time || 'Dia todo'}</span>
+                            </div>
+                            ${pTag}
+                        </div>
+                        <button onclick="deleteTask('${t.id}')" class="text-slate-400 hover:text-green-600 transition-colors p-3 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-green-200 hover:bg-green-50" title="Marcar como Concluída"><i class="fa-solid fa-check"></i></button>
+                    </div>
+                `;
+            });
+            updateAgendaBadge();
+        }
+
+        function updateAgendaBadge() {
+            const badge = document.getElementById('agenda-badge');
+            if(!badge || !currentUser) return;
+            const count = tasks.filter(t => t.ownerId === currentUser.uid).length;
+            if(count > 0) {
+                badge.textContent = count;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function populateTaskPartnerSelect() {
+            const select = document.getElementById('task-partner');
+            if(!select || !currentUser) return;
+            select.innerHTML = '<option value="">Não vincular a parceiro específico</option>';
+            partners.filter(p => p.ownerId === currentUser.uid).forEach(p => {
+                select.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+            });
+        }
+
+        // Sistema de Modais
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            if(modal) {
+                modal.classList.remove('pointer-events-none', 'opacity-0');
+                const content = document.getElementById(id + '-content');
+                if(content) content.classList.remove('scale-95');
+                
+                if(id === 'modal-partner') {
+                    document.getElementById('form-partner').reset();
+                    document.getElementById('partner-id').value = '';
+                    document.getElementById('modal-partner-content').querySelector('h3').innerHTML = '<i class="fa-solid fa-handshake text-brand-500"></i> Novo Parceiro ClickNotas';
+                }
+                if(id === 'modal-client') {
+                    document.getElementById('form-client').reset();
+                    document.getElementById('client-id').value = '';
+                    document.getElementById('modal-client-content').querySelector('h3').innerHTML = '<i class="fa-solid fa-user-plus text-brand-600"></i> Indicar Cliente (Lead)';
+                }
+                if(id === 'modal-agenda') document.getElementById('form-agenda').reset();
+            }
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            if(modal) {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                const content = document.getElementById(id + '-content');
+                if(content) content.classList.add('scale-95');
+            }
+        }
+
+        // Funções de Salvar (Ações)
+        function savePartner(e) {
+            e.preventDefault();
+            const idInput = document.getElementById('partner-id').value;
+            
+            if (idInput) {
+                // Atualizar Existente
+                const p = partners.find(x => x.id === idInput);
+                if(p) {
+                    p.name = document.getElementById('partner-name').value;
+                    p.doc = document.getElementById('partner-doc').value;
+                    p.sector = document.getElementById('partner-sector').value;
+                    p.email = document.getElementById('partner-email').value;
+                    p.phone = document.getElementById('partner-phone').value;
+                    p.notes = document.getElementById('partner-notes').value;
+                    showToast('Parceiro atualizado com sucesso!', 'success');
+                }
+            } else {
+                // Criar Novo
+                const newP = {
+                    id: 'p' + Date.now(),
+                    name: document.getElementById('partner-name').value,
+                    doc: document.getElementById('partner-doc').value,
+                    sector: document.getElementById('partner-sector').value,
+                    email: document.getElementById('partner-email').value,
+                    phone: document.getElementById('partner-phone').value,
+                    notes: document.getElementById('partner-notes').value,
+                    ownerId: currentUser.uid,
+                    ownerName: currentUser.name
+                };
+                partners.unshift(newP);
+                showToast('Parceiro registrado com sucesso!', 'success');
+            }
+            
+            closeModal('modal-partner');
+            updateDashboard();
+            if(!document.getElementById('view-partners').classList.contains('hidden')) renderGlobalPartners();
+            if(!document.getElementById('view-partner-details').classList.contains('hidden') && currentActivePartnerId) {
+                openPartnerDetailsSafe(currentActivePartnerId); // Refresca os dados da tela
+            }
+            populateTaskPartnerSelect();
+        }
+
+        function saveClient(e) {
+            e.preventDefault();
+            if(!currentActivePartnerId) return;
+            
+            const idInput = document.getElementById('client-id').value;
+            
+            if (idInput) {
+                // Atualizar Existente
+                const c = clients.find(x => x.id === idInput);
+                if(c) {
+                    c.company = document.getElementById('client-company').value;
+                    c.plan = document.getElementById('client-plan').value;
+                    c.integration = document.getElementById('client-integration').value;
+                    c.status = document.getElementById('client-status').value;
+                    showToast('Indicação atualizada com sucesso.', 'success');
+                }
+            } else {
+                // Criar Novo
+                const newC = {
+                    id: 'c' + Date.now(),
+                    partnerId: currentActivePartnerId,
+                    company: document.getElementById('client-company').value,
+                    plan: document.getElementById('client-plan').value,
+                    integration: document.getElementById('client-integration').value,
+                    status: document.getElementById('client-status').value,
+                };
+                clients.unshift(newC);
+                showToast('Indicação salva na base de dados.', 'success');
+            }
+            
+            closeModal('modal-client');
+            renderPartnerClients();
+            updateDashboard();
+        }
+
+        function editPartner(id) {
+            const p = partners.find(x => x.id === id);
+            if(!p) return;
+            document.getElementById('partner-id').value = p.id;
+            document.getElementById('partner-name').value = p.name;
+            document.getElementById('partner-doc').value = p.doc;
+            document.getElementById('partner-sector').value = p.sector;
+            document.getElementById('partner-email').value = p.email;
+            document.getElementById('partner-phone').value = p.phone;
+            document.getElementById('partner-notes').value = p.notes;
+            
+            document.getElementById('modal-partner-content').querySelector('h3').innerHTML = '<i class="fa-solid fa-pen text-brand-500"></i> Editar Parceiro';
+            openModal('modal-partner');
+        }
+
+        function editClient(id) {
+            const c = clients.find(x => x.id === id);
+            if(!c) return;
+            document.getElementById('client-id').value = c.id;
+            document.getElementById('client-company').value = c.company;
+            document.getElementById('client-plan').value = c.plan;
+            document.getElementById('client-integration').value = c.integration;
+            document.getElementById('client-status').value = c.status;
+            
+            document.getElementById('modal-client-content').querySelector('h3').innerHTML = '<i class="fa-solid fa-pen text-brand-600"></i> Editar Indicação';
+            openModal('modal-client');
+        }
+        
+        function unlinkPartner(id) {
+            if(confirm("Tem certeza que deseja desvincular este parceiro da sua carteira? Ele ficará livre para outros vendedores prospectarem.")) {
+                const p = partners.find(x => x.id === id);
+                if(p) {
+                    p.ownerId = null;
+                    p.ownerName = null;
+                    showToast('Parceiro liberado com sucesso.', 'success');
+                    navigateTo('partners'); // Volta para a tela de busca
+                    updateDashboard();
+                }
+            }
+        }
+
+        function saveTask(e) {
+            e.preventDefault();
+            const newT = {
+                id: 't' + Date.now(),
+                title: document.getElementById('task-title').value,
+                date: document.getElementById('task-date').value,
+                time: document.getElementById('task-time').value,
+                partnerId: document.getElementById('task-partner').value,
+                ownerId: currentUser.uid
+            };
+            tasks.push(newT);
+            closeModal('modal-agenda');
+            showToast('Compromisso agendado com sucesso!', 'success');
+            renderAgendaList();
+            updateDashboard();
+        }
+
+        function deleteClient(id) {
+            clients = clients.filter(c => c.id !== id);
+            renderPartnerClients();
+            updateDashboard();
+            showToast('Indicação removida.');
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            renderAgendaList();
+            updateDashboard();
+            showToast('Tarefa concluída e arquivada!', 'success');
+        }
+
+        function importExcel() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.xlsx, .xls, .csv';
+            input.onchange = e => {
+                if(e.target.files.length > 0) {
+                    showToast('Processando mapeamento de colunas...', 'success');
+                    setTimeout(() => showToast('Importação mock concluída com sucesso!'), 1500);
+                }
+            };
+            input.click();
+        }
+    </script>
+</body>
+</html>
