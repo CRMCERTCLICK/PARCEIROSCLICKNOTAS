@@ -1064,10 +1064,13 @@ const { data: tData } = await db.from('tasks').select('*');
                 badge.innerHTML = '<i class="fa-solid fa-check"></i> Sob sua gestão';
                 badge.className = 'bg-green-500 text-white border border-green-400 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg';
                 overlay.classList.add('hidden');
+                
+                // Botões atualizados com a opção de Lixeira (deletePartner)
                 actions.innerHTML = `
                     <div class="flex flex-col sm:flex-row gap-2 w-full mt-4 sm:mt-0">
                         <button onclick="editPartner('${id}')" class="bg-white text-slate-600 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-2" title="Editar Parceiro"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="unlinkPartner('${id}')" class="bg-white text-red-500 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-red-50 hover:border-red-100 transition-colors flex items-center justify-center gap-2" title="Desvincular Carteira"><i class="fa-solid fa-link-slash"></i></button>
+                        <button onclick="unlinkPartner('${id}')" class="bg-white text-orange-500 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-orange-50 hover:border-orange-100 transition-colors flex items-center justify-center gap-2" title="Desvincular Carteira"><i class="fa-solid fa-link-slash"></i></button>
+                        <button onclick="deletePartner('${id}')" class="bg-white text-red-500 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-red-50 hover:border-red-100 transition-colors flex items-center justify-center gap-2" title="Excluir Definitivamente"><i class="fa-solid fa-trash"></i></button>
                         <button onclick="openModal('modal-client')" class="bg-navy-900 text-white px-6 py-3 rounded-xl font-bold shadow-soft hover:bg-navy-800 transition-colors flex items-center justify-center gap-2 flex-1"><i class="fa-solid fa-plus text-brand-500"></i> Nova Indicação</button>
                     </div>
                 `;
@@ -1269,6 +1272,42 @@ const { data: tData } = await db.from('tasks').select('*');
             
             closeModal('modal-client');
             fetchInitialData();
+        }
+
+        // 1. EDITAR PARCEIRO (Abre o modal preenchido)
+        function editPartner(id) {
+            const p = partners.find(x => x.id === id);
+            if(!p) return;
+            document.getElementById('partner-id').value = p.id;
+            document.getElementById('partner-name').value = p.name;
+            document.getElementById('partner-doc').value = p.doc;
+            document.getElementById('partner-sector').value = p.sector;
+            document.getElementById('partner-email').value = p.email;
+            document.getElementById('partner-phone').value = p.phone;
+            document.getElementById('partner-notes').value = p.notes;
+            
+            document.getElementById('modal-partner-content').querySelector('h3').innerHTML = '<i class="fa-solid fa-pen text-brand-500"></i> Editar Parceiro';
+            openModal('modal-partner');
+        }
+
+        // 2. DESVINCULAR (Apenas solta o parceiro da sua carteira para outros vendedores)
+        async function unlinkPartner(id) {
+            if(confirm("Tem certeza que deseja desvincular este parceiro da sua carteira? Ele ficará livre para outros prospectarem.")) {
+                await db.from('partners').update({ ownerId: null, ownerName: null }).eq('id', id);
+                showToast('Parceiro liberado com sucesso.', 'success');
+                navigateTo('partners');
+                fetchInitialData();
+            }
+        }
+
+        // 3. EXCLUIR DEFINITIVAMENTE (Remove do banco de dados)
+        async function deletePartner(id) {
+            if(confirm("ATENÇÃO: Deseja EXCLUIR este parceiro definitivamente? Isso apagará os dados da nuvem.")) {
+                await db.from('partners').delete().eq('id', id);
+                showToast('Parceiro excluído do sistema.', 'success');
+                navigateTo('partners');
+                fetchInitialData();
+            }
         }
 
         // 3. SALVAR TAREFA NA NUVEM
