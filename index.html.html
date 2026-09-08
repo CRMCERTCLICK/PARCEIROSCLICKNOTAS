@@ -766,7 +766,14 @@ const supabaseUrl = 'https://zyuudhlhysdnhxflhawh.supabase.co';
 
        function initSystem() {
             navigateTo('dashboard');
-            fetchInitialData(); // Chama a função que busca os dados na nuvem
+            fetchInitialData(); 
+
+            // Ativa o Tempo Real: Se alguém mudar algo no banco, a tela de todo mundo atualiza sozinha!
+            db.channel('custom-all-channel')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'partners' }, fetchInitialData)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, fetchInitialData)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, fetchInitialData)
+                .subscribe();
         }
 
         async function fetchInitialData() {
@@ -1208,153 +1215,90 @@ const { data: tData } = await db.from('tasks').select('*');
         }
 
         // Funções de Salvar (Ações)
-        function savePartner(e) {
+        // 1. SALVAR PARCEIRO NA NUVEM
+        async function savePartner(e) {
             e.preventDefault();
             const idInput = document.getElementById('partner-id').value;
             
+            const partnerData = {
+                name: document.getElementById('partner-name').value,
+                doc: document.getElementById('partner-doc').value,
+                sector: document.getElementById('partner-sector').value,
+                email: document.getElementById('partner-email').value,
+                phone: document.getElementById('partner-phone').value,
+                notes: document.getElementById('partner-notes').value,
+                ownerId: currentUser.uid,
+                ownerName: currentUser.name
+            };
+
             if (idInput) {
-                // Atualizar Existente
-                const p = partners.find(x => x.id === idInput);
-                if(p) {
-                    p.name = document.getElementById('partner-name').value;
-                    p.doc = document.getElementById('partner-doc').value;
-                    p.sector = document.getElementById('partner-sector').value;
-                    p.email = document.getElementById('partner-email').value;
-                    p.phone = document.getElementById('partner-phone').value;
-                    p.notes = document.getElementById('partner-notes').value;
-                    showToast('Parceiro atualizado com sucesso!', 'success');
-                }
+                // Atualiza existente
+                await db.from('partners').update(partnerData).eq('id', idInput);
+                showToast('Parceiro atualizado com sucesso!', 'success');
             } else {
-                // Criar Novo
-                const newP = {
-                    id: 'p' + Date.now(),
-                    name: document.getElementById('partner-name').value,
-                    doc: document.getElementById('partner-doc').value,
-                    sector: document.getElementById('partner-sector').value,
-                    email: document.getElementById('partner-email').value,
-                    phone: document.getElementById('partner-phone').value,
-                    notes: document.getElementById('partner-notes').value,
-                    ownerId: currentUser.uid,
-                    ownerName: currentUser.name
-                };
-                partners.unshift(newP);
-                showToast('Parceiro registrado com sucesso!', 'success');
+                // Cria novo
+                await db.from('partners').insert([partnerData]);
+                showToast('Parceiro registrado na nuvem!', 'success');
             }
             
             closeModal('modal-partner');
-            updateDashboard();
-            if(!document.getElementById('view-partners').classList.contains('hidden')) renderGlobalPartners();
-            if(!document.getElementById('view-partner-details').classList.contains('hidden') && currentActivePartnerId) {
-                openPartnerDetailsSafe(currentActivePartnerId); // Refresca os dados da tela
-            }
-            populateTaskPartnerSelect();
+            fetchInitialData(); // Atualiza a tela
         }
 
-        function saveClient(e) {
+        // 2. SALVAR CLIENTE/INDICAÇÃO NA NUVEM
+        async function saveClient(e) {
             e.preventDefault();
             if(!currentActivePartnerId) return;
-            
             const idInput = document.getElementById('client-id').value;
             
+            const clientData = {
+                partnerId: currentActivePartnerId,
+                company: document.getElementById('client-company').value,
+                plan: document.getElementById('client-plan').value,
+                integration: document.getElementById('client-integration').value,
+                status: document.getElementById('client-status').value,
+            };
+
             if (idInput) {
-                // Atualizar Existente
-                const c = clients.find(x => x.id === idInput);
-                if(c) {
-                    c.company = document.getElementById('client-company').value;
-                    c.plan = document.getElementById('client-plan').value;
-                    c.integration = document.getElementById('client-integration').value;
-                    c.status = document.getElementById('client-status').value;
-                    showToast('Indicação atualizada com sucesso.', 'success');
-                }
+                await db.from('clients').update(clientData).eq('id', idInput);
+                showToast('Indicação atualizada.', 'success');
             } else {
-                // Criar Novo
-                const newC = {
-                    id: 'c' + Date.now(),
-                    partnerId: currentActivePartnerId,
-                    company: document.getElementById('client-company').value,
-                    plan: document.getElementById('client-plan').value,
-                    integration: document.getElementById('client-integration').value,
-                    status: document.getElementById('client-status').value,
-                };
-                clients.unshift(newC);
-                showToast('Indicação salva na base de dados.', 'success');
+                await db.from('clients').insert([clientData]);
+                showToast('Indicação salva na nuvem.', 'success');
             }
             
             closeModal('modal-client');
-            renderPartnerClients();
-            updateDashboard();
+            fetchInitialData();
         }
 
-        function editPartner(id) {
-            const p = partners.find(x => x.id === id);
-            if(!p) return;
-            document.getElementById('partner-id').value = p.id;
-            document.getElementById('partner-name').value = p.name;
-            document.getElementById('partner-doc').value = p.doc;
-            document.getElementById('partner-sector').value = p.sector;
-            document.getElementById('partner-email').value = p.email;
-            document.getElementById('partner-phone').value = p.phone;
-            document.getElementById('partner-notes').value = p.notes;
-            
-            document.getElementById('modal-partner-content').querySelector('h3').innerHTML = '<i class="fa-solid fa-pen text-brand-500"></i> Editar Parceiro';
-            openModal('modal-partner');
-        }
-
-        function editClient(id) {
-            const c = clients.find(x => x.id === id);
-            if(!c) return;
-            document.getElementById('client-id').value = c.id;
-            document.getElementById('client-company').value = c.company;
-            document.getElementById('client-plan').value = c.plan;
-            document.getElementById('client-integration').value = c.integration;
-            document.getElementById('client-status').value = c.status;
-            
-            document.getElementById('modal-client-content').querySelector('h3').innerHTML = '<i class="fa-solid fa-pen text-brand-600"></i> Editar Indicação';
-            openModal('modal-client');
-        }
-        
-        function unlinkPartner(id) {
-            if(confirm("Tem certeza que deseja desvincular este parceiro da sua carteira? Ele ficará livre para outros vendedores prospectarem.")) {
-                const p = partners.find(x => x.id === id);
-                if(p) {
-                    p.ownerId = null;
-                    p.ownerName = null;
-                    showToast('Parceiro liberado com sucesso.', 'success');
-                    navigateTo('partners'); // Volta para a tela de busca
-                    updateDashboard();
-                }
-            }
-        }
-
-        function saveTask(e) {
+        // 3. SALVAR TAREFA NA NUVEM
+        async function saveTask(e) {
             e.preventDefault();
-            const newT = {
-                id: 't' + Date.now(),
+            const taskData = {
                 title: document.getElementById('task-title').value,
                 date: document.getElementById('task-date').value,
                 time: document.getElementById('task-time').value,
                 partnerId: document.getElementById('task-partner').value,
                 ownerId: currentUser.uid
             };
-            tasks.push(newT);
+            
+            await db.from('tasks').insert([taskData]);
             closeModal('modal-agenda');
-            showToast('Compromisso agendado com sucesso!', 'success');
-            renderAgendaList();
-            updateDashboard();
+            showToast('Compromisso agendado!', 'success');
+            fetchInitialData();
         }
 
-        function deleteClient(id) {
-            clients = clients.filter(c => c.id !== id);
-            renderPartnerClients();
-            updateDashboard();
+        // 4. FUNÇÕES DE DELETAR DA NUVEM
+        async function deleteClient(id) {
+            await db.from('clients').delete().eq('id', id);
             showToast('Indicação removida.');
+            fetchInitialData();
         }
 
-        function deleteTask(id) {
-            tasks = tasks.filter(t => t.id !== id);
-            renderAgendaList();
-            updateDashboard();
+        async function deleteTask(id) {
+            await db.from('tasks').delete().eq('id', id);
             showToast('Tarefa concluída e arquivada!', 'success');
+            fetchInitialData();
         }
 
         function importExcel() {
