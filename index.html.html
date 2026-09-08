@@ -685,7 +685,7 @@
      // Inicializando o Banco de Dados (Substitua pelas suas chaves do Supabase!)
 const supabaseUrl = 'https://zyuudhlhysdnhxflhawh.supabase.co';
      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5dXVkaGxoeXNkbmh4ZmxoYXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NjcyNzgsImV4cCI6MjEwNDQ0MzI3OH0.ibnnfcnQWM9WVF2Pwu_psf7LJq-pKEfvPn1kfat7nOU';
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        const db = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         // Variáveis Globais (Agora vazias, pois virão do banco)
         let currentUser = null; 
@@ -722,7 +722,7 @@ const supabaseUrl = 'https://zyuudhlhysdnhxflhawh.supabase.co';
     showToast('Autenticando...', 'success');
 
     // Tenta logar no Supabase de verdade
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await db.auth.signInWithPassword({
         email: email,
         password: password,
     });
@@ -773,9 +773,11 @@ const supabaseUrl = 'https://zyuudhlhysdnhxflhawh.supabase.co';
             showToast('Sincronizando com a nuvem...', 'success');
             
             // Puxa parceiros, clientes e tarefas do Supabase
-            const { data: pData } = await supabase.from('partners').select('*');
-            const { data: cData } = await supabase.from('clients').select('*');
-            const { data: tData } = await supabase.from('tasks').select('*');
+            // Onde estava: await supabase.from(...)
+// Mude para:
+const { data: pData } = await db.from('partners').select('*');
+const { data: cData } = await db.from('clients').select('*');
+const { data: tData } = await db.from('tasks').select('*');
             
             // Preenche as listas com os dados reais
             partners = pData || [];
