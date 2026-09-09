@@ -680,6 +680,34 @@
             </div>
         </div>
     </div>
+<!-- Modal Emprestar Parceiro -->
+<div id="modal-lend" class="fixed inset-0 bg-navy-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+    <div class="bg-white rounded-3xl shadow-floating w-full max-w-md transform scale-95 transition-transform duration-300 overflow-hidden flex flex-col" id="modal-lend-content">
+        <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-purple-50">
+            <h3 class="text-lg font-display font-bold text-navy-900 flex items-center gap-2"><i class="fa-solid fa-clock text-purple-600"></i> Emprestar Parceiro</h3>
+            <button onclick="closeModal('modal-lend')" class="text-slate-400 hover:text-red-500 transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="p-6">
+            <form id="form-lend" onsubmit="submitLendPartner(event)" class="space-y-4">
+                <input type="hidden" id="lend-partner-id">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Vendedor de Destino *</label>
+                    <select id="lend-target-user" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 transition-all outline-none text-sm font-medium text-slate-600">
+                        <option value="">Selecione o colega...</option>
+                        <!-- Injetado via JS -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Data de Devolução Automática *</label>
+                    <input type="date" id="lend-end-date" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 transition-all outline-none text-sm text-slate-600">
+                </div>
+                <div class="pt-4 mt-2">
+                    <button type="submit" class="w-full py-3.5 text-sm font-bold bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors shadow-soft">Confirmar Empréstimo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
     <script>
      // Inicializando o Banco de Dados (Substitua pelas suas chaves do Supabase!)
@@ -1104,16 +1132,20 @@ if (!isMine && !currentUser.isSupervisor) {
         overlay.classList.add('hidden');
         
         actions.innerHTML = `
-            <div class="flex flex-col sm:flex-row gap-2 w-full mt-4 sm:mt-0">
-                <button onclick="editPartner('${id}')" class="bg-white text-slate-600 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-2" title="Editar Parceiro"><i class="fa-solid fa-pen"></i></button>
-                <button onclick="unlinkPartner('${id}')" class="bg-white text-orange-500 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-orange-50 hover:border-orange-100 transition-colors flex items-center justify-center gap-2" title="Desvincular Carteira"><i class="fa-solid fa-link-slash"></i></button>
-                
-                ${isSupervisor ? `<button onclick="reassignPartner('${id}')" class="bg-white text-blue-500 border border-blue-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-blue-50 transition-colors flex items-center justify-center gap-2" title="Transferir para outro Vendedor"><i class="fa-solid fa-people-arrows"></i></button>` : ''}
-                
-                <button onclick="deletePartner('${id}')" class="bg-white text-red-500 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-red-50 hover:border-red-100 transition-colors flex items-center justify-center gap-2" title="Excluir Definitivamente"><i class="fa-solid fa-trash"></i></button>
-                <button onclick="openModal('modal-client')" class="bg-navy-900 text-white px-6 py-3 rounded-xl font-bold shadow-soft hover:bg-navy-800 transition-colors flex items-center justify-center gap-2 flex-1"><i class="fa-solid fa-plus text-brand-500"></i> Nova Indicação</button>
-            </div>
-        `;
+    <div class="flex flex-col sm:flex-row gap-2 w-full mt-4 sm:mt-0">
+        <button onclick="editPartner('${id}')" class="bg-white text-slate-600 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-2" title="Editar Parceiro"><i class="fa-solid fa-pen"></i></button>
+        
+        <!-- NOVO BOTÃO DE EMPRÉSTIMO -->
+        <button onclick="openLendModal('${id}')" class="bg-white text-purple-500 border border-purple-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-purple-50 transition-colors flex items-center justify-center gap-2" title="Emprestar Parceiro"><i class="fa-solid fa-hand-holding-hand"></i></button>
+        
+        <button onclick="unlinkPartner('${id}')" class="bg-white text-orange-500 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-orange-50 hover:border-orange-100 transition-colors flex items-center justify-center gap-2" title="Desvincular Carteira"><i class="fa-solid fa-link-slash"></i></button>
+        
+        ${isSupervisor ? `<button onclick="reassignPartner('${id}')" class="bg-white text-blue-500 border border-blue-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-blue-50 transition-colors flex items-center justify-center gap-2" title="Transferir para outro Vendedor"><i class="fa-solid fa-people-arrows"></i></button>` : ''}
+        
+        <button onclick="deletePartner('${id}')" class="bg-white text-red-500 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-red-50 hover:border-red-100 transition-colors flex items-center justify-center gap-2" title="Excluir Definitivamente"><i class="fa-solid fa-trash"></i></button>
+        <button onclick="openModal('modal-client')" class="bg-navy-900 text-white px-6 py-3 rounded-xl font-bold shadow-soft hover:bg-navy-800 transition-colors flex items-center justify-center gap-2 flex-1"><i class="fa-solid fa-plus text-brand-500"></i> Nova Indicação</button>
+    </div>
+`;
     } else {
         badge.innerHTML = `<i class="fa-solid fa-lock"></i> Gestão de ${partner.ownerName}`;
         badge.className = 'bg-slate-800 text-white border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg';
@@ -1413,6 +1445,51 @@ async function reassignPartner(id) {
             showToast('Tarefa concluída e arquivada!', 'success');
             fetchInitialData();
         }
+
+// Abre o modal e carrega a lista de vendedores disponíveis
+function openLendModal(partnerId) {
+    document.getElementById('lend-partner-id').value = partnerId;
+    
+    // Filtra outros vendedores que já têm parceiros no sistema (exceto o usuário atual)
+    const sellers = [...new Set(partners.filter(p => p.ownerId && p.ownerId !== currentUser.uid).map(p => JSON.stringify({id: p.ownerId, name: p.ownerName})))].map(s => JSON.parse(s));
+    
+    const select = document.getElementById('lend-target-user');
+    select.innerHTML = '<option value="">Selecione o colega...</option>';
+    sellers.forEach(s => {
+        select.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+    });
+
+    openModal('modal-lend');
+}
+
+// Envia os dados para o Supabase
+async function submitLendPartner(e) {
+    e.preventDefault();
+    const partnerId = document.getElementById('lend-partner-id').value;
+    
+    const targetSelect = document.getElementById('lend-target-user');
+    const targetUserId = targetSelect.value;
+    const targetUserName = targetSelect.options[targetSelect.selectedIndex].text;
+    
+    const endDate = document.getElementById('lend-end-date').value;
+    const partner = partners.find(p => p.id === partnerId);
+    
+    // Atualiza o banco: Troca o dono, mas salva o dono original e a data limite
+    await db.from('partners').update({ 
+        ownerId: targetUserId, 
+        ownerName: targetUserName,
+        originalOwnerId: partner.ownerId,
+        originalOwnerName: partner.ownerName,
+        loanEndDate: endDate + 'T23:59:59' // Expira no último segundo do dia escolhido
+    }).eq('id', partnerId);
+    
+    showToast(`Parceiro emprestado para ${targetUserName} até ${endDate}.`, 'success');
+    closeModal('modal-lend');
+    navigateTo('partners');
+    
+    // Recarrega os dados na tela
+    fetchInitialData();
+}
 
         function importExcel() {
             const input = document.createElement('input');
