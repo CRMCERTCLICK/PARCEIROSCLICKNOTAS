@@ -680,6 +680,34 @@
             </div>
         </div>
     </div>
+    <!-- Modal Automação de E-mail -->
+<div id="modal-auto-email" class="fixed inset-0 bg-navy-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+    <div class="bg-white rounded-3xl shadow-floating w-full max-w-lg transform scale-95 transition-transform duration-300 overflow-hidden flex flex-col" id="modal-auto-email-content">
+        <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-indigo-50">
+            <h3 class="text-lg font-display font-bold text-navy-900 flex items-center gap-2"><i class="fa-solid fa-envelope-open-text text-indigo-600"></i> Automação de E-mail</h3>
+            <button onclick="closeModal('modal-auto-email')" class="text-slate-400 hover:text-red-500 transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="p-6">
+            <form id="form-auto-email" onsubmit="saveAutoEmail(event)" class="space-y-4">
+                <input type="hidden" id="auto-email-partner-id">
+                
+                <div class="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 mb-2">
+                    <input type="checkbox" id="auto-email-active" class="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                    <label for="auto-email-active" class="text-sm font-bold text-navy-900 cursor-pointer">Ativar envio automático (a cada 7 dias)</label>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Mensagem do E-mail</label>
+                    <p class="text-[10px] text-slate-500 mb-2">Escreva o texto padrão. Ele será enviado repetidamente no ciclo de 7 dias.</p>
+                    <textarea id="auto-email-message" rows="5" required placeholder="Olá! Passando para lembrar da nossa parceria e saber se temos novas indicações nesta semana..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all outline-none text-sm text-slate-700 resize-none"></textarea>
+                </div>
+                <div class="pt-4 mt-2">
+                    <button type="submit" class="w-full py-3.5 text-sm font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-soft">Salvar Automação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <!-- Modal Emprestar Parceiro -->
 <div id="modal-lend" class="fixed inset-0 bg-navy-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
     <div class="bg-white rounded-3xl shadow-floating w-full max-w-md transform scale-95 transition-transform duration-300 overflow-hidden flex flex-col" id="modal-lend-content">
@@ -1134,7 +1162,7 @@ if (!isMine && !currentUser.isSupervisor) {
         actions.innerHTML = `
     <div class="flex flex-col sm:flex-row gap-2 w-full mt-4 sm:mt-0">
         <button onclick="editPartner('${id}')" class="bg-white text-slate-600 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-2" title="Editar Parceiro"><i class="fa-solid fa-pen"></i></button>
-        
+        <button onclick="openAutoEmailModal('${id}')" class="bg-white text-indigo-500 border border-indigo-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2" title="Automação de E-mail (7 em 7 dias)"><i class="fa-solid fa-envelope-open-text"></i></button>
         <!-- NOVO BOTÃO DE EMPRÉSTIMO -->
         <button onclick="openLendModal('${id}')" class="bg-white text-purple-500 border border-purple-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-purple-50 transition-colors flex items-center justify-center gap-2" title="Emprestar Parceiro"><i class="fa-solid fa-hand-holding-hand"></i></button>
         
@@ -1500,7 +1528,48 @@ async function submitLendPartner(e) {
     // Recarrega os dados na tela
     fetchInitialData();
 }
+// Abre o modal de automação e puxa os dados salvos
+function openAutoEmailModal(partnerId) {
+    const p = partners.find(x => x.id === partnerId);
+    if (!p) return;
+    
+    document.getElementById('auto-email-partner-id').value = p.id;
+    document.getElementById('auto-email-active').checked = p.autoEmailActive || false;
+    document.getElementById('auto-email-message').value = p.autoEmailMessage || '';
+    
+    openModal('modal-auto-email');
+}
 
+// Salva a regra no Supabase e agenda o próximo disparo
+async function saveAutoEmail(e) {
+    e.preventDefault();
+    const partnerId = document.getElementById('auto-email-partner-id').value;
+    const isActive = document.getElementById('auto-email-active').checked;
+    const message = document.getElementById('auto-email-message').value;
+    
+    // Calcula a data: se ligou a automação, agenda para daqui a 7 dias.
+    let nextSend = null;
+    if (isActive) {
+        nextSend = new Date();
+        nextSend.setDate(nextSend.getDate() + 7);
+    }
+
+    // Salva no banco de dados
+    await db.from('partners').update({
+        autoEmailActive: isActive,
+        autoEmailMessage: message,
+        autoEmailNextSend: isActive ? nextSend.toISOString() : null
+    }).eq('id', partnerId);
+    
+    if (isActive) {
+        showToast('Automação ligada! O primeiro envio ocorrerá em 7 dias.', 'success');
+    } else {
+        showToast('Automação desligada.', 'success');
+    }
+    
+    closeModal('modal-auto-email');
+    fetchInitialData();
+}
         function importExcel() {
             const input = document.createElement('input');
             input.type = 'file';
@@ -1555,6 +1624,27 @@ function scheduleMeeting(taskId) {
 
     console.log("Abrindo URL do Google Agenda:", url);
     window.open(url, '_blank');
+}
+
+// Função para editar a indicação (Cliente)
+function editClient(id) {
+    const c = clients.find(x => x.id === id);
+    if (!c) return;
+    
+    // Preenche os inputs do modal com os dados salvos
+    document.getElementById('client-id').value = c.id;
+    document.getElementById('client-company').value = c.company;
+    document.getElementById('client-plan').value = c.plan || 'Emissor NF-e Web';
+    document.getElementById('client-integration').value = c.integration || 'Manual / Digitação';
+    document.getElementById('client-status').value = c.status || 'Em Negociação';
+    
+    // Atualiza o título do modal para "Editar"
+    const modalContent = document.getElementById('modal-client-content');
+    if (modalContent) {
+        modalContent.querySelector('h3').innerHTML = '<i class="fa-solid fa-pen text-brand-600"></i> Editar Indicação';
+    }
+    
+    openModal('modal-client');
 }
 
     </script>
