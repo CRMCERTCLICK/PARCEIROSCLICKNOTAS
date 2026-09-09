@@ -1017,13 +1017,22 @@ if (!isMine && !currentUser.isSupervisor) {
         }
 
         // Vincular Parceiro (Hub)
-        function claimPartner(e, partnerId) {
+        // Vincular Parceiro (Hub)
+        async function claimPartner(e, partnerId) {
             e.stopPropagation(); 
             if(!currentUser) return;
             const p = partners.find(x => x.id === partnerId);
             if(p && p.ownerId === null) {
+                // Salva no Banco de Dados (Supabase)
+                await db.from('partners').update({ 
+                    ownerId: currentUser.uid, 
+                    ownerName: currentUser.name 
+                }).eq('id', partnerId);
+
+                // Atualiza a tela localmente
                 p.ownerId = currentUser.uid;
                 p.ownerName = currentUser.name;
+                
                 showToast(`Parceiro vinculado à sua carteira com sucesso!`, 'success');
                 renderGlobalPartners();
                 updateDashboard();
