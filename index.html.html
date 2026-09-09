@@ -1514,45 +1514,48 @@ async function submitLendPartner(e) {
             input.click();
         }
 // Função para abrir o Google Agenda com Meet e e-mails preenchidos
+// Função para abrir o Google Agenda com Meet e e-mails preenchidos
 function scheduleMeeting(taskId) {
-    if (!currentUser) return;
+    console.log("Botão de agendamento clicado! ID da tarefa:", taskId);
+    
+    if (!currentUser) {
+        alert("Erro: Usuário não identificado.");
+        return;
+    }
 
-    // Busca a tarefa e o parceiro vinculado
     const task = tasks.find(t => t.id === taskId);
-    if (!task) return;
+    if (!task) {
+        alert("Erro: Tarefa não encontrada.");
+        return;
+    }
 
     const partner = partners.find(p => p.id === task.partnerId);
     
-    // Pega os e-mails (Vendedor + Parceiro, se existir)
     const sellerEmail = currentUser.email;
     const partnerEmail = (partner && partner.email) ? partner.email : '';
     
-    // Formata a lista de convidados separada por vírgula
     const guests = encodeURIComponent([sellerEmail, partnerEmail].filter(e => e).join(','));
     const title = encodeURIComponent(task.title);
     const details = encodeURIComponent(`Reunião de alinhamento ClickNotas.\nParceiro: ${partner ? partner.name : 'Não especificado'}`);
 
-    // Monta a URL base do Google Calendar
     let url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&add=${guests}`;
 
-    // Formata a data e hora (se houver) para o padrão do Google Calendar (YYYYMMDDTHHMMSSZ)
     if (task.date) {
         try {
             const timeString = task.time ? task.time : '09:00';
             const startDate = new Date(`${task.date}T${timeString}:00`);
-            const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // Duração padrão de 1 hora
+            const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); 
 
             const format = (d) => d.toISOString().replace(/-|:|\.\d\d\d/g, '');
             url += `&dates=${format(startDate)}/${format(endDate)}`;
         } catch(e) {
-            console.error("Erro ao formatar data para o calendário", e);
+            console.error("Erro ao formatar data:", e);
         }
     }
 
-    // Abre em uma nova aba
+    console.log("Abrindo URL do Google Agenda:", url);
     window.open(url, '_blank');
 }
-
 
     </script>
 </body>
