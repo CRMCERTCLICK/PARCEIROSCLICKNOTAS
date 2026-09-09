@@ -772,11 +772,14 @@ currentUser = {
             setTimeout(() => login.style.opacity = '1', 50);
         }
 
-       function initSystem() {
+      function initSystem() {
             navigateTo('dashboard');
             fetchInitialData(); 
 
-            // Ativa o Tempo Real: Se alguém mudar algo no banco, a tela de todo mundo atualiza sozinha!
+            // Remove canais antigos para evitar o erro de duplicação no console
+            db.removeAllChannels();
+
+            // Ativa o Tempo Real
             db.channel('custom-all-channel')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'partners' }, fetchInitialData)
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, fetchInitialData)
@@ -1064,12 +1067,20 @@ if (!isMine && !currentUser.isSupervisor) {
             }
 
             // Permissões
-            if(isAvailable) {
-                badge.innerHTML = '<i class="fa-solid fa-unlock"></i> Livre para Prospecção';
-                badge.className = 'bg-brand-500 text-navy-900 border border-brand-400 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg';
-                overlay.classList.remove('hidden');
-                actions.innerHTML = `<button onclick="claimPartner(event, '${id}')" class="bg-brand-500 text-navy-900 px-6 py-3 rounded-xl font-bold shadow-soft hover:bg-brand-600 transition-colors w-full sm:w-auto mt-4 sm:mt-0">Vincular a Minha Carteira</button>`;
-            } else if (isMine || isSupervisor) { 
+           if(isAvailable) {
+        badge.innerHTML = '<i class="fa-solid fa-unlock"></i> Livre para Prospecção';
+        badge.className = 'bg-brand-500 text-navy-900 border border-brand-400 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg';
+        
+        // Supervisor tem acesso aberto. Vendedor comum vê o bloqueio até vincular.
+        if (isSupervisor) {
+            overlay.classList.add('hidden');
+        } else {
+            overlay.classList.remove('hidden');
+            overlay.querySelector('p').textContent = "Vincule este parceiro à sua carteira para gerenciar os clientes.";
+        }
+        
+        actions.innerHTML = `<button onclick="claimPartner(event, '${id}')" class="bg-brand-500 text-navy-900 px-6 py-3 rounded-xl font-bold shadow-soft hover:bg-brand-600 transition-colors w-full sm:w-auto mt-4 sm:mt-0">Vincular a Minha Carteira</button>`;
+    } else if (isMine || isSupervisor) {
         if(isSupervisor && !isMine) {
             badge.innerHTML = `<i class="fa-solid fa-eye"></i> Gestão de Supervisor (${partner.ownerName})`;
             badge.className = 'bg-blue-500 text-white border border-blue-400 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg';
