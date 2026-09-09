@@ -736,7 +736,15 @@ const supabaseUrl = 'https://zyuudhlhysdnhxflhawh.supabase.co';
     // Usamos a primeira parte do e-mail como nome caso ele não tenha nome cadastrado
     const userName = data.user.user_metadata?.name || email.split('@')[0];
     
-    currentUser = { uid: data.user.id, email: data.user.email, name: userName };
+    // Verifica se é o email do supervisor
+const isSupervisor = email === 'lorena.baiao@clicknotas.com.br'; 
+
+currentUser = { 
+    uid: data.user.id, 
+    email: data.user.email, 
+    name: userName,
+    isSupervisor: isSupervisor 
+};
 
     // Atualiza a interface com os dados do usuário
     document.getElementById('nav-user-name').textContent = currentUser.name;
@@ -969,10 +977,11 @@ const { data: tData } = await db.from('tasks').select('*');
                               </div>`;
                     
                     // Bloqueio Total para outros vendedores
-                    if (!isMine) {
-                        clickAction = `onclick="showToast('Acesso negado. Este parceiro é exclusivo de ${p.ownerName}.', 'error')"`;
-                        cardClasses = `bg-slate-50 rounded-3xl p-6 shadow-sm border border-slate-200 opacity-90 cursor-not-allowed relative`;
-                    }
+                   // Bloqueio Total para outros vendedores (exceto supervisores)
+if (!isMine && !currentUser.isSupervisor) {
+    clickAction = `onclick="showToast('Acesso negado. Este parceiro é exclusivo de ${p.ownerName}.', 'error')"`;
+    cardClasses = `bg-slate-50 rounded-3xl p-6 shadow-sm border border-slate-200 opacity-90 cursor-not-allowed relative`;
+}
                 }
 
                 grid.innerHTML += `
@@ -1037,7 +1046,7 @@ const { data: tData } = await db.from('tasks').select('*');
 
             const isMine = partner.ownerId === currentUser.uid;
             const isAvailable = partner.ownerId === null;
-            
+            const isSupervisor = currentUser.isSupervisor;
             const badge = document.getElementById('detail-owner-badge');
             const overlay = document.getElementById('detail-lock-overlay');
             const actions = document.getElementById('detail-action-container');
@@ -1060,26 +1069,34 @@ const { data: tData } = await db.from('tasks').select('*');
                 badge.className = 'bg-brand-500 text-navy-900 border border-brand-400 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg';
                 overlay.classList.remove('hidden');
                 actions.innerHTML = `<button onclick="claimPartner(event, '${id}')" class="bg-brand-500 text-navy-900 px-6 py-3 rounded-xl font-bold shadow-soft hover:bg-brand-600 transition-colors w-full sm:w-auto mt-4 sm:mt-0">Vincular a Minha Carteira</button>`;
-            } else if (isMine) {
-                badge.innerHTML = '<i class="fa-solid fa-check"></i> Sob sua gestão';
-                badge.className = 'bg-green-500 text-white border border-green-400 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg';
-                overlay.classList.add('hidden');
+            } else if (isMine || isSupervisor) { 
+        if(isSupervisor && !isMine) {
+            badge.innerHTML = `<i class="fa-solid fa-eye"></i> Gestão de Supervisor (${partner.ownerName})`;
+            badge.className = 'bg-blue-500 text-white border border-blue-400 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg';
+        } else {
+            badge.innerHTML = '<i class="fa-solid fa-check"></i> Sob sua gestão';
+            badge.className = 'bg-green-500 text-white border border-green-400 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg';
+        }
+        
+        overlay.classList.add('hidden');
+        
+        actions.innerHTML = `
+            <div class="flex flex-col sm:flex-row gap-2 w-full mt-4 sm:mt-0">
+                <button onclick="editPartner('${id}')" class="bg-white text-slate-600 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-2" title="Editar Parceiro"><i class="fa-solid fa-pen"></i></button>
+                <button onclick="unlinkPartner('${id}')" class="bg-white text-orange-500 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-orange-50 hover:border-orange-100 transition-colors flex items-center justify-center gap-2" title="Desvincular Carteira"><i class="fa-solid fa-link-slash"></i></button>
                 
-                // Botões atualizados com a opção de Lixeira (deletePartner)
-                actions.innerHTML = `
-                    <div class="flex flex-col sm:flex-row gap-2 w-full mt-4 sm:mt-0">
-                        <button onclick="editPartner('${id}')" class="bg-white text-slate-600 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-2" title="Editar Parceiro"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="unlinkPartner('${id}')" class="bg-white text-orange-500 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-orange-50 hover:border-orange-100 transition-colors flex items-center justify-center gap-2" title="Desvincular Carteira"><i class="fa-solid fa-link-slash"></i></button>
-                        <button onclick="deletePartner('${id}')" class="bg-white text-red-500 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-red-50 hover:border-red-100 transition-colors flex items-center justify-center gap-2" title="Excluir Definitivamente"><i class="fa-solid fa-trash"></i></button>
-                        <button onclick="openModal('modal-client')" class="bg-navy-900 text-white px-6 py-3 rounded-xl font-bold shadow-soft hover:bg-navy-800 transition-colors flex items-center justify-center gap-2 flex-1"><i class="fa-solid fa-plus text-brand-500"></i> Nova Indicação</button>
-                    </div>
-                `;
-            } else {
-                badge.innerHTML = `<i class="fa-solid fa-lock"></i> Gestão de ${partner.ownerName}`;
-                badge.className = 'bg-slate-800 text-white border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg';
-                overlay.classList.remove('hidden');
-                actions.innerHTML = '';
-            }
+                ${isSupervisor ? `<button onclick="reassignPartner('${id}')" class="bg-white text-blue-500 border border-blue-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-blue-50 transition-colors flex items-center justify-center gap-2" title="Transferir para outro Vendedor"><i class="fa-solid fa-people-arrows"></i></button>` : ''}
+                
+                <button onclick="deletePartner('${id}')" class="bg-white text-red-500 border border-slate-200 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-red-50 hover:border-red-100 transition-colors flex items-center justify-center gap-2" title="Excluir Definitivamente"><i class="fa-solid fa-trash"></i></button>
+                <button onclick="openModal('modal-client')" class="bg-navy-900 text-white px-6 py-3 rounded-xl font-bold shadow-soft hover:bg-navy-800 transition-colors flex items-center justify-center gap-2 flex-1"><i class="fa-solid fa-plus text-brand-500"></i> Nova Indicação</button>
+            </div>
+        `;
+    } else {
+        badge.innerHTML = `<i class="fa-solid fa-lock"></i> Gestão de ${partner.ownerName}`;
+        badge.className = 'bg-slate-800 text-white border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg';
+        overlay.classList.remove('hidden');
+        actions.innerHTML = '';
+    }
 
             renderPartnerClients();
             navigateTo('partner-details');
@@ -1299,6 +1316,40 @@ const { data: tData } = await db.from('tasks').select('*');
                 fetchInitialData();
             }
         }
+async function reassignPartner(id) {
+    // 1. Extrai uma lista única de vendedores atuais que já possuem parceiros
+    const sellers = [...new Set(partners.filter(p => p.ownerId).map(p => JSON.stringify({id: p.ownerId, name: p.ownerName})))].map(s => JSON.parse(s));
+    
+    if(sellers.length === 0) {
+        showToast('Não há outros vendedores no sistema para transferir.', 'error');
+        return;
+    }
+
+    // 2. Monta o texto de opções para o prompt
+    let promptText = "Digite o NÚMERO correspondente ao vendedor desejado:\n\n";
+    sellers.forEach((seller, index) => {
+        promptText += `[${index + 1}] - ${seller.name}\n`;
+    });
+
+    const choice = prompt(promptText);
+    const selectedIndex = parseInt(choice) - 1;
+
+    // 3. Atualiza o dono no banco
+    if(choice && sellers[selectedIndex]) {
+        const newOwner = sellers[selectedIndex];
+        
+        await db.from('partners').update({ 
+            ownerId: newOwner.id, 
+            ownerName: newOwner.name 
+        }).eq('id', id);
+        
+        showToast(`Parceiro transferido com sucesso para ${newOwner.name}.`, 'success');
+        navigateTo('partners');
+        fetchInitialData();
+    } else if (choice) {
+        showToast('Opção inválida.', 'error');
+    }
+}
 
         // 3. EXCLUIR DEFINITIVAMENTE (Remove do banco de dados)
         async function deletePartner(id) {
