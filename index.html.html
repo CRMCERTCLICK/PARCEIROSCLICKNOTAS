@@ -1230,7 +1230,17 @@ if (!isMine && !currentUser.isSupervisor) {
                             </div>
                             ${pTag}
                         </div>
-                        <button onclick="deleteTask('${t.id}')" class="text-slate-400 hover:text-green-600 transition-colors p-3 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-green-200 hover:bg-green-50" title="Marcar como Concluída"><i class="fa-solid fa-check"></i></button>
+                        <div class="flex items-center gap-2">
+    <!-- Novo Botão: Agendar no Meet/Email -->
+    <button onclick="scheduleMeeting('${t.id}')" class="text-slate-400 hover:text-blue-600 transition-colors p-3 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-blue-200 hover:bg-blue-50" title="Agendar Google Meet e Convidar">
+        <i class="fa-solid fa-video"></i>
+    </button>
+    
+    <!-- Botão Existente: Concluir Tarefa -->
+    <button onclick="deleteTask('${t.id}')" class="text-slate-400 hover:text-green-600 transition-colors p-3 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-green-200 hover:bg-green-50" title="Marcar como Concluída">
+        <i class="fa-solid fa-check"></i>
+    </button>
+</div>
                     </div>
                 `;
             });
@@ -1503,6 +1513,47 @@ async function submitLendPartner(e) {
             };
             input.click();
         }
+// Função para abrir o Google Agenda com Meet e e-mails preenchidos
+function scheduleMeeting(taskId) {
+    if (!currentUser) return;
+
+    // Busca a tarefa e o parceiro vinculado
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const partner = partners.find(p => p.id === task.partnerId);
+    
+    // Pega os e-mails (Vendedor + Parceiro, se existir)
+    const sellerEmail = currentUser.email;
+    const partnerEmail = (partner && partner.email) ? partner.email : '';
+    
+    // Formata a lista de convidados separada por vírgula
+    const guests = encodeURIComponent([sellerEmail, partnerEmail].filter(e => e).join(','));
+    const title = encodeURIComponent(task.title);
+    const details = encodeURIComponent(`Reunião de alinhamento ClickNotas.\nParceiro: ${partner ? partner.name : 'Não especificado'}`);
+
+    // Monta a URL base do Google Calendar
+    let url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&add=${guests}`;
+
+    // Formata a data e hora (se houver) para o padrão do Google Calendar (YYYYMMDDTHHMMSSZ)
+    if (task.date) {
+        try {
+            const timeString = task.time ? task.time : '09:00';
+            const startDate = new Date(`${task.date}T${timeString}:00`);
+            const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // Duração padrão de 1 hora
+
+            const format = (d) => d.toISOString().replace(/-|:|\.\d\d\d/g, '');
+            url += `&dates=${format(startDate)}/${format(endDate)}`;
+        } catch(e) {
+            console.error("Erro ao formatar data para o calendário", e);
+        }
+    }
+
+    // Abre em uma nova aba
+    window.open(url, '_blank');
+}
+
+
     </script>
 </body>
 </html>
