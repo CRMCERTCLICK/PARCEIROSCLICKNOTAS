@@ -772,19 +772,22 @@ currentUser = {
             setTimeout(() => login.style.opacity = '1', 50);
         }
 
-      function initSystem() {
+      let isSubscribed = false;
+
+        function initSystem() {
             navigateTo('dashboard');
             fetchInitialData(); 
 
-            // Remove canais antigos para evitar o erro de duplicação no console
-            db.removeAllChannels();
-
-            // Ativa o Tempo Real
-            db.channel('custom-all-channel')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'partners' }, fetchInitialData)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, fetchInitialData)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, fetchInitialData)
-                .subscribe();
+            // Ativa o Tempo Real apenas se ainda não estiver ativado
+            if (!isSubscribed) {
+                db.channel('custom-all-channel')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'partners' }, fetchInitialData)
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, fetchInitialData)
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, fetchInitialData)
+                    .subscribe();
+                
+                isSubscribed = true;
+            }
         }
 
         async function fetchInitialData() {
