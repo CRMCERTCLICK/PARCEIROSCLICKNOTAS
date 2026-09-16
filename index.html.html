@@ -1571,8 +1571,7 @@ async function saveAutoEmail(e) {
     closeModal('modal-auto-email');
     fetchInitialData();
 }
-       function importExcel() {
-    // Cria o input de arquivo invisível
+     function importExcel() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.xlsx, .xls, .csv';
@@ -1586,15 +1585,10 @@ async function saveAutoEmail(e) {
         const reader = new FileReader();
         reader.onload = async function(event) {
             try {
-                // Lê o arquivo como ArrayBuffer e passa para a biblioteca XLSX
                 const data = new Uint8Array(event.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
-                
-                // Pega a primeira aba (planilha) do arquivo
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
-                
-                // Converte a aba do Excel em um array de objetos JSON
                 const jsonData = XLSX.utils.sheet_to_json(worksheet);
                 
                 if(jsonData.length === 0) {
@@ -1604,20 +1598,27 @@ async function saveAutoEmail(e) {
 
                 showToast(`Salvando ${jsonData.length} parceiros...`, 'success');
 
-                // Mapeia as colunas do Excel para as colunas da tabela no Supabase
-                const partnersToInsert = jsonData.map(row => ({
-                    // Mapeie os nomes das colunas conforme o cabeçalho da sua planilha
-                    name: row['Nome'] || row['Razão Social'] || row['Nome Fantasia'] || 'Parceiro Sem Nome',
-                    doc: String(row['CNPJ'] || row['CPF'] || row['Documento'] || ''),
-                    sector: row['Segmento'] || row['Setor'] || 'Outros',
-                    email: row['Email'] || row['E-mail'] || '',
-                    phone: String(row['Telefone'] || row['WhatsApp'] || row['Celular'] || ''),
-                    notes: row['Anotações'] || row['Obs'] || 'Importado via planilha',
-                    ownerId: currentUser.uid,
-                    ownerName: currentUser.name
-                }));
+                // Mapeando exatamente as colunas da sua imagem
+                const partnersToInsert = jsonData.map(row => {
+                    
+                    // Salvando as informações extras nas Anotações para não perder dados
+                    let notasExtras = "Importado via planilha.\n";
+                    if (row['NOME RESPONSAVEL']) notasExtras += "Responsável: " + row['NOME RESPONSAVEL'] + "\n";
+                    if (row['VENDEDOR']) notasExtras += "Vendedor (Planilha): " + row['VENDEDOR'] + "\n";
+                    if (row['LINK DE ACESSO DO PARCEIRO NO SISTEMA']) notasExtras += "Link de Acesso: " + row['LINK DE ACESSO DO PARCEIRO NO SISTEMA'];
 
-                // Faz a inserção no banco de dados Supabase
+                    return {
+                        name: row['PARCEIROS'] || 'Parceiro Sem Nome',
+                        phone: String(row['TELEFONE'] || ''),
+                        doc: '', // Não há coluna de CNPJ na sua planilha
+                        sector: 'Outros', 
+                        email: '', // Não há coluna de email na sua planilha
+                        notes: notasExtras.trim(),
+                        ownerId: currentUser.uid,
+                        ownerName: currentUser.name
+                    };
+                });
+
                 const { error } = await db.from('partners').insert(partnersToInsert);
                 
                 if (error) {
@@ -1627,24 +1628,16 @@ async function saveAutoEmail(e) {
                 }
 
                 showToast('Importação concluída com sucesso!', 'success');
-                
-                // Atualiza o sistema para exibir os parceiros recém-importados
                 fetchInitialData(); 
-                
-                // Redireciona para a tela de parceiros para o usuário ver o resultado
                 navigateTo('partners');
 
             } catch (error) {
                 console.error("Erro ao processar planilha:", error);
-                showToast('Falha ao processar o arquivo. Verifique se está no formato correto.', 'error');
+                showToast('Falha ao processar o arquivo.', 'error');
             }
         };
-        
-        // Inicia a leitura do arquivo
         reader.readAsArrayBuffer(file);
     };
-    
-    // Abre a janela de seleção de arquivo
     input.click();
 }
 // Função para abrir o Google Agenda com Meet e e-mails preenchidos
